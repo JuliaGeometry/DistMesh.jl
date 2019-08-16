@@ -42,18 +42,19 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
 
     # 1. Create initial distribution in bounding box (isosurface from grid)
     pv=HomogenousMesh(fd,bbox, (20,20,20), MarchingCubes())
+    # TODO These need to be reshaped to be matrices or w/e matlab does
     p=pv.vertices
     t=pv.faces
 
     # Connectivities (for trisurfupd)
-    [t2t,t2n]=mkt2t(t)
-    t2t=int32(t2t-1)'
-    t2n=int8(t2n-1)'
+    t2t,t2n = mkt2t(t)
+    t2t = (t2t.-one(eltype(t2t)))'
+    t2n = (t2n.-one(eltype(t2n)))'
 
     N=length(p)                                         # Number of points N
-    pold=fill(Inf, N)                                            # For first iteration
+    pold = fill(Inf, N)                                            # For first iteration
     while true
-        p0=p
+        p0 = p
         # 3. Retriangulation
         if max(sqrt(sum((p.-pold).^2,2))/h0)>ttol           # Any large movement?
             pold=p;                                          # Save current positions

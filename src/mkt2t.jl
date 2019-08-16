@@ -8,21 +8,22 @@ function mkt2t(t)
     dim = size(t,2)-1
     
     if dim == 1
-        edges=[t(:,2)
-               t(:,1)]
+        edges=[t[:,2]
+               t[:,1]]
     elseif dim == 2
-        edges=[t(:,[2,3])
-               t(:,[3,1])
-               t(:,[1,2])]
+        edges=[t[:,[2,3]]
+               t[:,[3,1]]
+               t[:,[1,2]]]
     elseif dim == 3
-        edges=[t(:,[2,3,4])
-               t(:,[3,4,1])
-               t(:,[4,1,2])
-               t(:,[1,2,3])]
+        edges=[t[:,[2,3,4]]
+               t[:,[3,4,1]]
+               t[:,[4,1,2]]
+               t[:,[1,2,3]]
     end
 
     ts=[repeat(1:nt,1,dim+1); kron(1:(dim+1),ones(1,nt))]'
 
+    # TODO
     edges=sort(edges,2)
     [foo,foo,jx]=unique(edges,'rows') #TODO
 

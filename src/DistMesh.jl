@@ -5,7 +5,7 @@ using GeometryTypes,
       StaticArrays
 
 #include("circumcenter.jl")
-include("distmeshsurface.jl")
+#include("distmeshsurface.jl")
 include("dsphere.jl")
 include("mkt2t.jl")
 
