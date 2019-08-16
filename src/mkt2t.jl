@@ -18,14 +18,15 @@ function mkt2t(t)
         edges=[t[:,[2,3,4]]
                t[:,[3,4,1]]
                t[:,[4,1,2]]
-               t[:,[1,2,3]]
+               t[:,[1,2,3]]]
     end
 
+    # TODO repeat
     ts=[repeat(1:nt,1,dim+1); kron(1:(dim+1),ones(1,nt))]'
 
     # TODO
     edges=sort(edges,2)
-    [foo,foo,jx]=unique(edges,'rows') #TODO
+    jx=unique(edges,1)
 
     ix = sortperm(jx)
     sort!(jx)
@@ -36,12 +37,12 @@ function mkt2t(t)
     ts2=ts[ix+1,:]
 
     t2t=zeros(nt,dim+1)
-    t2t[ts1[:,1]+nt*(ts1[:,2]-1)] = ts2[:,1]
-    t2t[ts2[:,1]+nt*(ts2[:,2]-1)] = ts1[:,1]
+    t2t[ts1[:,1]+nt*(ts1[:,2].-1)] = ts2[:,1]
+    t2t[ts2[:,1]+nt*(ts2[:,2].-1)] = ts1[:,1]
 
     t2n=zeros(nt,dim+1)
-    t2n[ts1[:,1]+nt*(ts1[:,2]-1)] = ts2[:,2]
-    t2n[ts2[:,1]+nt*(ts2[:,2]-1)] = ts1[:,2]  
+    t2n[ts1[:,1]+nt*(ts1[:,2].-1)] = ts2[:,2]
+    t2n[ts2[:,1]+nt*(ts2[:,2].-1)] = ts1[:,2]  
 
     return t2t, t2n
 end

@@ -1,7 +1,7 @@
 using DistMesh
 using Test
 
-include("mk2t.jl")
+include("mkt2t.jl")
 
 @testset "distmeshsurface" begin
     fd(p) = dsphere(p,0,0,0,1);
