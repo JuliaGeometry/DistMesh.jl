@@ -3,6 +3,11 @@ uuid = "f7ee28b6-bfbf-11e9-3e31-8961b86f052c"
 authors = ["Steve Kelly <kd2cca@gmail.com>"]
 version = "0.1.0"
 
+[deps]
+GeometryTypes = "4d00f742-c7ba-57c2-abde-4428a4b178cb"
+Meshing = "e6723b4c-ebff-59f1-b4b7-d97aa5274f73"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [compat]
 julia = "1"
 

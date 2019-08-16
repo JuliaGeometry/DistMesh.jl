@@ -1,5 +1,12 @@
 module DistMesh
 
-greet() = print("Hello World!")
+using GeometryTypes,
+      Meshing,
+      StaticArrays
+
+#include("circumcenter.jl")
+include("distmeshsurface.jl")
+include("dsphere.jl")
+include("mkt2t.jl")
 
 end # module

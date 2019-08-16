@@ -62,10 +62,10 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
             pmid=(p(t(:,1),:)+p(t(:,2),:)+p(t(:,3),:))/3;    # Compute centroids
             # 4. Describe each bar by a unique pair of nodes
             bars=[t(:,[1,2]);t(:,[1,3]);t(:,[2,3])];         # Interior bars duplicated
-            bars=unique(sort(bars,2),'rows');                # Bars as node pairs
+            bars=unique(sort(bars,2),"rows")                # Bars as node pairs
             # 5. Graphical output of the current mesh
-            clf,patch('faces',t,'vertices',p,'facecol',[.8,.9,1],'edgecol','k');
-            axis equal;axis off;view(3);cameramenu;drawnow
+            #clf,patch('faces',t,'vertices',p,'facecol',[.8,.9,1],'edgecol','k');
+            #axis equal;axis off;view(3);cameramenu;drawnow
         end
 
         # 6. Move mesh points based on bar lengths L and forces F
