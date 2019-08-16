@@ -4,45 +4,63 @@ function mkt2t(t)
     
     #   Copyright (C) 2004-2012 Per-Olof Persson. See COPYRIGHT.TXT for details.
     
-    nt = size(t,1)
-    dim = size(t,2)-1
+    nt=size(t,1)
+    dim=size(t,2)-1
     
+    # switch dim
+    #  case 1
+    #   edges=[t(:,2)
+    #          t(:,1)];
+    #  case 2
+    #   edges=[t(:,[2,3])
+    #          t(:,[3,1])
+    #          t(:,[1,2])];
+    #  case 3
+    #   edges=[t(:,[2,3,4])
+    #          t(:,[3,4,1])
+    #          t(:,[4,1,2])
+    #          t(:,[1,2,3])];
+    # end
+
     if dim == 1
         edges=[t[:,2]
-               t[:,1]]
+                t[:,1]];
     elseif dim == 2
         edges=[t[:,[2,3]]
-               t[:,[3,1]]
-               t[:,[1,2]]]
+                t[:,[3,1]]
+                t[:,[1,2]]];
     elseif dim == 3
         edges=[t[:,[2,3,4]]
-               t[:,[3,4,1]]
-               t[:,[4,1,2]]
-               t[:,[1,2,3]]]
-    end
+                t[:,[3,4,1]]
+                t[:,[4,1,2]]
+                t[:,[1,2,3]]];
+    end #ok
 
-    # TODO repeat
-    ts=[repeat(1:nt,1,dim+1); kron(1:(dim+1),ones(1,nt))]'
+    # ts=[repmat(int32(1:nt),1,dim+1); kron(int32(1:(dim+1)),ones(1,nt,'int32'))]';
+    ts=hcat(repeat(1:nt,dim+1), kron(1:(dim+1),ones(1,nt)'))
 
-    # TODO
-    edges=sort(edges,2)
-    jx=unique(edges,1)
-
-    ix = sortperm(jx)
-    sort!(jx)
+    # edges=sort(edges,2);
+    edges=sort(edges,dims=2) # ok
+    # [foo,foo,jx]=unique(edges,'rows');
+    jx=unique(edges)
+    @show size(jx), jx[3], jx[500]
+ 
+    # [jx,ix]=sort(jx);
+    #jx,ix=sort(jx);
+    # ts=ts(ix,:);
     ts=ts[ix,:]
 
-    ix=findall(diff(jx).== 0)
-    ts1=ts[ix,:]
-    ts2=ts[ix+1,:]
-
-    t2t=zeros(nt,dim+1)
-    t2t[ts1[:,1]+nt*(ts1[:,2].-1)] = ts2[:,1]
-    t2t[ts2[:,1]+nt*(ts2[:,2].-1)] = ts1[:,1]
-
-    t2n=zeros(nt,dim+1)
-    t2n[ts1[:,1]+nt*(ts1[:,2].-1)] = ts2[:,2]
-    t2n[ts2[:,1]+nt*(ts2[:,2].-1)] = ts1[:,2]  
-
-    return t2t, t2n
+    # ix=find(diff(jx)==0);
+    # ts1=ts(ix,:);
+    # ts2=ts(ix+1,:);
+    
+    # t2t=zeros(nt,dim+1,'int32');
+    # t2t(ts1(:,1)+nt*(ts1(:,2)-1))=ts2(:,1);
+    # t2t(ts2(:,1)+nt*(ts2(:,2)-1))=ts1(:,1);
+    
+    # if nargout>=2
+    #   t2n=zeros(nt,dim+1,'int32');
+    #   t2n(ts1(:,1)+nt*(ts1(:,2)-1))=ts2(:,2);
+    #   t2n(ts2(:,1)+nt*(ts2(:,2)-1))=ts1(:,2);  
+    # end
 end
