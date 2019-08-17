@@ -60,7 +60,10 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
             pold=p;                                          # Save current positions
             [t,t2t,t2n]=trisurfupd(int32(t-1)',t2t,t2n,p');  # Update triangles
             t=double(t+1)';
+
+            # this doesnt seem to do anything
             pmid=(p(t(:,1),:)+p(t(:,2),:)+p(t(:,3),:))/3;    # Compute centroids
+            
             # 4. Describe each bar by a unique pair of nodes
             bars=[t(:,[1,2]);t(:,[1,3]);t(:,[2,3])];         # Interior bars duplicated
             bars=unique(sort(bars,2),"rows")                # Bars as node pairs
@@ -70,12 +73,24 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
         end
 
         # 6. Move mesh points based on bar lengths L and forces F
+        # get the point from the bar index
         barvec=p(bars(:,1),:)-p(bars(:,2),:);              # List of bar vectors
+        
+        # vector
         L=sqrt(sum(barvec.^2,2));                          # L = Bar lengths
         hbars=feval(fh,(p(bars(:,1),:)+p(bars(:,2),:))/2,varargin{:});
+
+
         L0=hbars*Fscale*sqrt(sum(L.^2)/sum(hbars.^2));     # L0 = Desired lengths
+
+        # maximum element
         F=max(L0-L,0);                                     # Bar forces (scalars)
         Fvec=F./L*[1,1,1].*barvec;                         # Bar forces (x,y,z components)
+        #Ftot=full(sparse(bars(:,[1,1,1,2,2,2]),ones(size(F))*[1,2,3,1,2,3],[Fvec,-Fvec],N,3));
+
+        # in julia these can't be matrices. They must be vectors. Since
+        # we are solving we should be able to reshape to linear so the COO format
+        # still solves for the DOF we need
         Ftot=full(sparse(bars(:,[1,1,1,2,2,2]),ones(size(F))*[1,2,3,1,2,3],[Fvec,-Fvec],N,3));
         p=p+deltat*Ftot;                                   # Update node positions
 

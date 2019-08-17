@@ -42,11 +42,11 @@ function mkt2t(t)
     # edges=sort(edges,2);
     edges=sort(edges,dims=2) # ok
     # [foo,foo,jx]=unique(edges,'rows');
-    jx=unique(edges)
-    @show size(jx), jx[3], jx[500]
+    @show edges
  
     # [jx,ix]=sort(jx);
-    #jx,ix=sort(jx);
+    jx = sort(jx)
+    ix = sortperm(jx)
     # ts=ts(ix,:);
     ts=ts[ix,:]
 

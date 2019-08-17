@@ -3,6 +3,8 @@ module DistMesh
 using GeometryTypes,
       Meshing,
       StaticArrays
+include("GroupSlices.jl")
+using .GroupSlices
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
