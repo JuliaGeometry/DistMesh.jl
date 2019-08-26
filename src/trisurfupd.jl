@@ -9,8 +9,8 @@
 #template<class T> inline T length(T *x) { return sqrt(sqr(x[0])+sqr(x[1])+sqr(x[2])); }
 #template<class T> inline T dot(T *x,T *y) { return x[0]*y[0]+x[1]*y[1]+x[2]*y[2]; }
 #template<class T> inline void cross(T *v1,T *v2,T *n) { n[0]=v1[1]*v2[2]-v1[2]*v2[1];
-                                                        n[1]=v1[2]*v2[0]-v1[0]*v2[2];
-                                                        n[2]=v1[0]*v2[1]-v1[1]*v2[0]; }
+#                                                        n[1]=v1[2]*v2[0]-v1[0]*v2[2];
+#                                                        n[2]=v1[0]*v2[1]-v1[1]*v2[0]; }
 #const char mod3x1[3]={1,2,0};
 #const char mod3x2[3]={2,0,1};
 

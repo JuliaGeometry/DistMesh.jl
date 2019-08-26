@@ -41,7 +41,7 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
     deps=sqrt(eps())*h0
 
     # 1. Create initial distribution in bounding box (isosurface from grid)
-    pv=HomogenousMesh(fd,bbox, (20,20,20), MarchingCubes())
+    pv=HomogenousMesh(fd,bbox, (20,20,20), MarchingTetrahedra())
     # TODO These need to be reshaped to be matrices or w/e matlab does
     p=pv.vertices
     t=pv.faces
