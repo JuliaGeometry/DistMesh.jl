@@ -13,6 +13,8 @@ julia = "1"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+MAT = "23992714-dd62-5051-b70f-ba57cb901cac"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
 
 [targets]
-test = ["Test"]
+test = ["Test", "MAT", "FileIO"]

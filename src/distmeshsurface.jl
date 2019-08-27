@@ -63,7 +63,7 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
 
             # this doesnt seem to do anything
             pmid=(p(t(:,1),:)+p(t(:,2),:)+p(t(:,3),:))/3;    # Compute centroids
-            
+
             # 4. Describe each bar by a unique pair of nodes
             bars=[t(:,[1,2]);t(:,[1,3]);t(:,[2,3])];         # Interior bars duplicated
             bars=unique(sort(bars,2),"rows")                # Bars as node pairs
@@ -75,7 +75,7 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
         # 6. Move mesh points based on bar lengths L and forces F
         # get the point from the bar index
         barvec=p(bars(:,1),:)-p(bars(:,2),:);              # List of bar vectors
-        
+
         # vector
         L=sqrt(sum(barvec.^2,2));                          # L = Bar lengths
         hbars=feval(fh,(p(bars(:,1),:)+p(bars(:,2),:))/2,varargin{:});
