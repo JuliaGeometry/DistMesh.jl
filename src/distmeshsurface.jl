@@ -47,24 +47,36 @@ function distmeshsurface(fd,fh,h0,bbox::HyperRectangle,varargin)
     t=pv.faces
 
     # Connectivities (for trisurfupd)
+    # [t2t,t2n]=mkt2t(t)
+    # t2t
+    # t2n
+    # t2t=int32(t2t-1)'; t2n=int8(t2n-1)';
     t2t,t2n = mkt2t(t)
     t2t = (t2t.-one(eltype(t2t)))'
-    t2n = (t2n.-one(eltype(t2n)))'
+    t2n = (t2n.-one(eltype(t2n)))' # TODO there might be assumptions in trisurfup that might bit us later here
 
+    # N=size(p,1);                                         % Number of points N
+    # pold=inf;                                            % For first iteration
+    # while 1
     N=length(p)                                         # Number of points N
     pold = fill(Inf, N)                                            # For first iteration
     while true
         p0 = p
         # 3. Retriangulation
         if max(sqrt(sum((p.-pold).^2,2))/h0)>ttol           # Any large movement?
-            pold=p;                                          # Save current positions
-            [t,t2t,t2n]=trisurfupd(int32(t-1)',t2t,t2n,p');  # Update triangles
-            t=double(t+1)';
+            # pold=p;                                          # Save current positions
+            # [t,t2t,t2n]=trisurfupd(int32(t-1)',t2t,t2n,p');  # Update triangles
+            # t=double(t+1)';
+            pold=p                                          # Save current positions
+            t, t2t, t2n = trisurfupd(int32(t-1)',t2t,t2n,p')  # Update triangles
+            t=double(t+1)'
 
             # this doesnt seem to do anything
-            pmid=(p(t(:,1),:)+p(t(:,2),:)+p(t(:,3),:))/3;    # Compute centroids
+            # pmid=(p(t(:,1),:)+p(t(:,2),:)+p(t(:,3),:))/3;    # Compute centroids
 
             # 4. Describe each bar by a unique pair of nodes
+            # bars=[t(:,[1,2]);t(:,[1,3]);t(:,[2,3])];         # Interior bars duplicated
+            # bars=unique(sort(bars,2),"rows")                # Bars as node pairs
             bars=[t(:,[1,2]);t(:,[1,3]);t(:,[2,3])];         # Interior bars duplicated
             bars=unique(sort(bars,2),"rows")                # Bars as node pairs
             # 5. Graphical output of the current mesh
