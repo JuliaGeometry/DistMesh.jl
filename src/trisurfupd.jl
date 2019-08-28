@@ -13,7 +13,10 @@
 #                                                        n[2]=v1[0]*v2[1]-v1[1]*v2[0]; }
 #const char mod3x1[3]={1,2,0};
 #const char mod3x2[3]={2,0,1};
+const mod3x1 = (1,2,0)
+const mod3x2 = (2,0,1)
 
+# unused, seems incorrect for 3d embeddings
 #double triarea(double *p1,double *p2,double *p3)
 #{
 function triarea(p1, p2, p3)
@@ -32,32 +35,41 @@ end # ok
 #void trinormal3(double *p1,double *p2,double *p3,double *n)
 #{
 function trinormal3(p1, p2, p3, n)
-  #double d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
-  #double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
-  #cross(d12,d13,n);
+    #double d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
+    #double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
+    #cross(d12,d13,n);
 
-  # SVectors?
-  #d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
-  #d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
-  #vc = cross(d12,d13);
+    # SVectors?
+    #d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
+    #d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
+    #vc = cross(d12,d13);
 
-  # normalize?
-  double nnorm=length(n);
-  n[0]/=nnorm; n[1]/=nnorm; n[2]/=nnorm;
+    # normalize?
+    double nnorm=length(n)
+    n[0]/=nnorm; n[1]/=nnorm; n[2]/=nnorm;
 end
 
 # triangle quality
 #double triqual3(double *p1,double *p2,double *p3)
 # {
-  double n[3];
-  double d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
-  double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
-  double d23[3]={ p3[0]-p2[0], p3[1]-p2[1], p3[2]-p2[2] };
-  cross(d12,d13,n);
-  double vol=length(n)/2.0;
-  double den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23);
-  return 6.928203230275509*vol/den;
-}
+function triqual3(double *p1,double *p2,double *p3)
+    # double n[3];
+    # double d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
+    # double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
+    # double d23[3]={ p3[0]-p2[0], p3[1]-p2[1], p3[2]-p2[2] };
+    # cross(d12,d13,n);
+    # double vol=length(n)/2.0;
+    # double den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23);
+    # return 6.928203230275509*vol/den;
+    double n[3];
+    double d12[3] = p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
+    double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
+    double d23[3]={ p3[0]-p2[0], p3[1]-p2[1], p3[2]-p2[2] };
+    cross(d12,d13,n);
+    double vol=length(n)/2.0;
+    double den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23);
+    return 6.928203230275509*vol/den;
+end
 
 void tupdate(double *p,int *t,int *t2t,char *t2n,
              int np,int nt)
@@ -70,19 +82,27 @@ void tupdate(double *p,int *t,int *t2t,char *t2n,
         double q2=triqual3(&p[3*t[0+3*t2]],&p[3*t[1+3*t2]],&p[3*t[2+3*t2]]);
         double minqold=std::min(q1,q2);
         if (minqold<0.9) {
-          char n2=t2n[n1+3*t1];
-          char tix11=mod3x1[n1];
-          char tix12=mod3x2[n1];
-          char tix21=mod3x1[n2];
-          char tix22=mod3x2[n2];
-          
-          int newt[2][3]={t[0+3*t1],t[1+3*t1],t[2+3*t1],
-                          t[0+3*t2],t[1+3*t2],t[2+3*t2]};
-          
-          // Swap edge
+        #   char n2=t2n[n1+3*t1];
+        #   char tix11=mod3x1[n1];
+        #   char tix12=mod3x2[n1];
+        #   char tix21=mod3x1[n2];
+        #   char tix22=mod3x2[n2];
+          char n2=t2n[n1+3*t1+1]
+          char tix11=mod3x1[n1+1]
+          char tix12=mod3x2[n1+1]
+          char tix21=mod3x1[n2+1]
+          char tix22=mod3x2[n2+1]
+
+        #   int newt[2][3]={t[0+3*t1],t[1+3*t1],t[2+3*t1],
+        #                   t[0+3*t2],t[1+3*t2],t[2+3*t2]};
+            int newt[2][3]={t[0+3*t1],t[1+3*t1],t[2+3*t1],
+                        t[0+3*t2],t[1+3*t2],t[2+3*t2]};
+        #   Swap edge
+        #   newt[0][tix12]=newt[1][n2];
+        #   newt[1][tix22]=newt[0][n1];
           newt[0][tix12]=newt[1][n2];
           newt[1][tix22]=newt[0][n1];
-          
+
           double q3=triqual3(&p[3*newt[0][0]],&p[3*newt[0][1]],&p[3*newt[0][2]]);
           double q4=triqual3(&p[3*newt[1][0]],&p[3*newt[1][1]],&p[3*newt[1][2]]);
           double minqnew=std::min(q3,q4);
@@ -98,11 +118,11 @@ void tupdate(double *p,int *t,int *t2t,char *t2n,
             if (flip) {
               int nbt;
               char nbn;
-              
+
               // Insert new triangles
               memcpy(t+3*t1,newt[0],3*sizeof(int));
               memcpy(t+3*t2,newt[1],3*sizeof(int));
-              
+
               // Update t2t and t2n
               nbt=t2t[tix21+3*t2];
               nbn=t2n[tix21+3*t2];
@@ -112,7 +132,7 @@ void tupdate(double *p,int *t,int *t2t,char *t2n,
                 t2t[nbn+3*nbt]=t1;
                 t2n[nbn+3*nbt]=n1;
               }
-              
+
               nbt=t2t[tix11+3*t1];
               nbn=t2n[tix11+3*t1];
               t2t[n2+3*t2]=nbt;
@@ -121,7 +141,7 @@ void tupdate(double *p,int *t,int *t2t,char *t2n,
                 t2t[nbn+3*nbt]=t2;
                 t2n[nbn+3*nbt]=n2;
               }
-              
+
               t2t[tix11+3*t1]=t2;
               t2n[tix11+3*t1]=tix21;
               t2t[tix21+3*t2]=t1;
