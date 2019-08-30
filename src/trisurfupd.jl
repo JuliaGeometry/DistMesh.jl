@@ -63,9 +63,9 @@ function triqual3(p1, p2, p3)
     # double vol=length(n)/2.0;
     # double den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23);
     # return 6.928203230275509*vol/den;
-    d12[3] = p2 - p1
-    d13[3] = p3 - p1
-    d23[3] = p3 - p2
+    d12 = p2 - p1
+    d13 = p3 - p1
+    d23 = p3 - p2
     n = cross(d12,d13)
     vol = norm(n)/2.0
     den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23)
@@ -80,6 +80,13 @@ void tupdate(double *p,int *t,int *t2t,char *t2n,
     for (char n1=0; n1<3; n1++) {
       int t2=t2t[n1+3*t1];
       if (t2>=0) {
+=#
+function tupdate(p, t, t2t, t2n, np, nt)
+    for t1=0:nt
+        for n1=0x00:0x02
+            t2 = t2t[n1+3*t1+1]
+            if t2>=0
+#=
         double q1=triqual3(&p[3*t[0+3*t1]],&p[3*t[1+3*t1]],&p[3*t[2+3*t1]]);
         double q2=triqual3(&p[3*t[0+3*t2]],&p[3*t[1+3*t2]],&p[3*t[2+3*t2]]);
         double minqold=std::min(q1,q2);
@@ -89,11 +96,16 @@ void tupdate(double *p,int *t,int *t2t,char *t2n,
         #   char tix12=mod3x2[n1];
         #   char tix21=mod3x1[n2];
         #   char tix22=mod3x2[n2];
-          char n2=t2n[n1+3*t1+1]
-          char tix11=mod3x1[n1+1]
-          char tix12=mod3x2[n1+1]
-          char tix21=mod3x1[n2+1]
-          char tix22=mod3x2[n2+1]
+=#
+                q1 = triqual3(p[3*t[0+3*t1]],&p[3*t[1+3*t1]],&p[3*t[2+3*t1]])
+                q2 = triqual3(p[3*t[0+3*t2]],&p[3*t[1+3*t2]],&p[3*t[2+3*t2]])
+                minqold = min(q1,q2)
+                if minqold < 0.9
+                    char n2=t2n[n1+3*t1+1]
+                    char tix11=mod3x1[n1+1]
+                    char tix12=mod3x2[n1+1]
+                    char tix21=mod3x1[n2+1]
+                    char tix22=mod3x2[n2+1]
 
         #   int newt[2][3]={t[0+3*t1],t[1+3*t1],t[2+3*t1],
         #                   t[0+3*t2],t[1+3*t2],t[2+3*t2]};
