@@ -34,25 +34,27 @@ end # ok
 
 #void trinormal3(double *p1,double *p2,double *p3,double *n)
 #{
-function trinormal3(p1, p2, p3, n)
+function trinormal3(p1, p2, p3)
     #double d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
     #double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
     #cross(d12,d13,n);
 
-    # SVectors?
-    #d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
-    #d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
-    #vc = cross(d12,d13);
-
     # normalize?
-    double nnorm=length(n)
-    n[0]/=nnorm; n[1]/=nnorm; n[2]/=nnorm;
+    # double nnorm=length(n)
+    # n[0]/=nnorm; n[1]/=nnorm; n[2]/=nnorm;
+
+    d12 = p2-p1
+    d13 = p3-p1
+    n = cross(d12,d13)
+
+    nnorm=norm(n)
+    n./nnorm
 end
 
 # triangle quality
 #double triqual3(double *p1,double *p2,double *p3)
 # {
-function triqual3(double *p1,double *p2,double *p3)
+function triqual3(p1, p2, p3)
     # double n[3];
     # double d12[3]={ p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
     # double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
@@ -61,16 +63,16 @@ function triqual3(double *p1,double *p2,double *p3)
     # double vol=length(n)/2.0;
     # double den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23);
     # return 6.928203230275509*vol/den;
-    double n[3];
-    double d12[3] = p2[0]-p1[0], p2[1]-p1[1], p2[2]-p1[2] };
-    double d13[3]={ p3[0]-p1[0], p3[1]-p1[1], p3[2]-p1[2] };
-    double d23[3]={ p3[0]-p2[0], p3[1]-p2[1], p3[2]-p2[2] };
-    cross(d12,d13,n);
-    double vol=length(n)/2.0;
-    double den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23);
-    return 6.928203230275509*vol/den;
+    d12[3] = p2 - p1
+    d13[3] = p3 - p1
+    d23[3] = p3 - p2
+    n = cross(d12,d13)
+    vol = norm(n)/2.0
+    den=dot(d12,d12)+dot(d13,d13)+dot(d23,d23)
+    return 6.928203230275509*vol/den
 end
 
+#=
 void tupdate(double *p,int *t,int *t2t,char *t2n,
              int np,int nt)
 {
@@ -152,19 +154,20 @@ void tupdate(double *p,int *t,int *t2t,char *t2n,
       }
     }
 }
-  
-void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
-{
-  plhs[0]=mxDuplicateArray(prhs[0]);
-  plhs[1]=mxDuplicateArray(prhs[1]);
-  plhs[2]=mxDuplicateArray(prhs[2]);
-  int *t=(int*)mxGetPr(plhs[0]);
-  int *t2t=(int*)mxGetPr(plhs[1]);
-  char *t2n=(char*)mxGetPr(plhs[2]);
-  int nt=mxGetN(prhs[0]);
+=#
 
-  double *p=mxGetPr(prhs[3]);
-  int np=mxGetN(prhs[3]);
+# void mexFunction(int nlhs, mxArray *plhs[], int nrhs, const mxArray *prhs[])
+# {
+#   plhs[0]=mxDuplicateArray(prhs[0]);
+#   plhs[1]=mxDuplicateArray(prhs[1]);
+#   plhs[2]=mxDuplicateArray(prhs[2]);
+#   int *t=(int*)mxGetPr(plhs[0]);
+#   int *t2t=(int*)mxGetPr(plhs[1]);
+#   char *t2n=(char*)mxGetPr(plhs[2]);
+#   int nt=mxGetN(prhs[0]);
 
-  tupdate(p,t,t2t,t2n,np,nt);
-}
+#   double *p=mxGetPr(prhs[3]);
+#   int np=mxGetN(prhs[3]);
+
+#   tupdate(p,t,t2t,t2n,np,nt);
+# }

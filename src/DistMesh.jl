@@ -2,6 +2,7 @@ module DistMesh
 
 using GeometryTypes,
       Meshing,
+      LinearAlgebra,
       StaticArrays
 
 #include("circumcenter.jl")
