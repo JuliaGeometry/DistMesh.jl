@@ -3,7 +3,8 @@ module DistMesh
 using GeometryTypes,
       Meshing,
       LinearAlgebra,
-      StaticArrays
+      StaticArrays,
+      TetGen
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
