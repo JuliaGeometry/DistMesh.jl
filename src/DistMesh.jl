@@ -10,7 +10,7 @@ using GeometryTypes,
 include("dsphere.jl")
 include("mkt2t.jl")
 include("munique.jl")
-include("trisurfupd.jl")
+#include("trisurfupd.jl")
 
 export distmeshsurface
 

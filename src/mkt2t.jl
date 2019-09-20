@@ -1,3 +1,4 @@
+# ported
 function mkt2t(t)
     #MKT2T  Compute element connectivities from element indices.
     #   [T2T,T2N]=MKT2T(T)
@@ -44,37 +45,28 @@ function mkt2t(t)
     # edges=sort(edges,2);
     edges=sort(edges,dims=2) # ok
     jx=munique(edges)
-    @show length(jx), jx[1:15]
 
     # [jx,ix]=sort(jx);
     ix = sortperm(jx)
     jx = sort(jx)
-    @show length(jx), jx[1:15,:] # okay
-    @show length(ix), ix[1:15,:] # okay
 
     # ts=ts(ix,:);
     ts=ts[ix,:]
 
     # ix=find(diff(jx)==0);
     djx = diff(jx)
-    @show typeof(jx), typeof(djx)
     ix=findall(iszero, djx) #okay
     # ts1=ts(ix,:);
-    @show length(ix), ix[1:15,:] # okay
     ts1=ts[ix,:]
-    @show length(ts1), ts1[1:15,:]
     # ts2=ts(ix+1,:);
     ts2=ts[ix.+1,:]
-    @show length(ts2), ts2[1:15,:]
 
     # t2t=zeros(nt,dim+1,'int32');
     # t2t(ts1(:,1)+nt*(ts1(:,2)-1))=ts2(:,1);
     # t2t(ts2(:,1)+nt*(ts2(:,2)-1))=ts1(:,1);
     t2t=zeros(Int, nt,dim+1)
-    @show typeof(ts1), typeof(ts2)
     t2t[ts1[:,1]+nt*(ts1[:,2].-1)]=ts2[:,1]
     t2t[ts2[:,1]+nt*(ts2[:,2].-1)]=ts1[:,1]
-    @show length(t2t), t2t[1:15,:]
 
     # if nargout>=2
     #   t2n=zeros(nt,dim+1,'int32');
