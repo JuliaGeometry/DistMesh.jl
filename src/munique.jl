@@ -2,7 +2,7 @@
 # function to generate value to index mapping
 # not sure if tuple is optimal here, but want to ensure
 # immutability of keys
-rowpair(a, i) = (a[i,1], a[i,2]) => i 
+rowpair(a, i) = (a[i,1], a[i,2]) => i
 
 """
 Compatibility with Matlab-style `[C, ia, ic] = unique(A, 'rows')`.
