@@ -23,48 +23,82 @@ function distmeshnd(fdist,fh,h,box,fix)
     dim=size(box,2);
     ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps)*h;
 
-    # 1. Create initial distribution in bounding box
-    if dim==1
-        p=(box(1):h:box(2))';
-    else
-        cbox=cell(1,dim);
-        for ii=1:dim
-            cbox{ii}=box(1,ii):h:box(2,ii);
-        end
-        pp=cell(1,dim);
-        [pp{:}]=ndgrid(cbox{:});
-        p=zeros(prod(size(pp{1})),dim);
-        for ii=1:dim
-            p(:,ii)=pp{ii}(:);
+    # # 1. Create initial distribution in bounding box
+    # if dim==1
+    #     p=(box(1):h:box(2))';
+    # else
+    #     cbox=cell(1,dim);
+    #     for ii=1:dim
+    #         cbox{ii}=box(1,ii):h:box(2,ii);
+    #     end
+    #     pp=cell(1,dim);
+    #     [pp{:}]=ndgrid(cbox{:});
+    #     p=zeros(prod(size(pp{1})),dim);
+    #     for ii=1:dim
+    #         p(:,ii)=pp{ii}(:);
+    #     end
+    # end
+
+    # # % 2. Remove points outside the region, apply the rejection method
+    # p=p(feval(fdist,p,varargin{:})<geps,:);
+    # r0=feval(fh,p);
+    # p=[fix; p(rand(size(p,1),1)<min(r0)^dim./r0.^dim,:)];
+    # N=size(p,1);
+
+    VertType=GeometryBasics.Point{3,Float64}
+    origin=VertType(-1,-1,-1)
+    widths=VertType(2,2,2)
+    samples::NTuple{3,T}=_DEFAULT_SAMPLES
+    p = VertType[]
+
+    nx, ny, nz = samples[1], samples[2], samples[3]
+
+
+    # we subtract one from the length along each axis because
+    # an NxNxN SDF has N-1 cells on each axis
+    s = VertType(widths[1]/(nx-1), widths[2]/(ny-1), widths[3]/(nz-1))
+
+    @inbounds for xi = 1:nx-1, yi = 1:ny-1, zi = 1:nz-1
+
+        points = (VertType(xi-1,yi-1,zi-1) .* s .+ origin,
+                  VertType(xi,yi-1,zi-1) .* s .+ origin,
+                  VertType(xi,yi,zi-1) .* s .+ origin,
+                  VertType(xi-1,yi,zi-1) .* s .+ origin,
+                  VertType(xi-1,yi-1,zi) .* s .+ origin,
+                  VertType(xi,yi-1,zi) .* s .+ origin,
+                  VertType(xi,yi,zi) .* s .+ origin,
+                  VertType(xi-1,yi,zi) .* s .+ origin)
+
+        for i = 1:8
+            f(points[i]) <= 0 && push!(p,points[i])
         end
     end
 
-    # % 2. Remove points outside the region, apply the rejection method
-    p=p(feval(fdist,p,varargin{:})<geps,:);
-    r0=feval(fh,p);
-    p=[fix; p(rand(size(p,1),1)<min(r0)^dim./r0.^dim,:)];
-    N=size(p,1);
-
     count=0;
-    p0=inf;
+    #p0=inf;
     while true
         #% 3. Retriangulation by Delaunay
-        if max(sqrt(sum((p-p0).^2,2)))>ttol*h
-            p0=p;
-            t=delaunayn(p);
-            pmid=zeros(size(t,1),dim);
-            for ii=1:dim+1
-                pmid=pmid+p(t(:,ii),:)/(dim+1);
-            end
-            t=t(feval(fdist,pmid,varargin{:})<-geps,:);
+        #if max(sqrt(sum((p-p0).^2,2)))>ttol*h
+            #p0=p;
+            triangulation=delaunayn(p)
+            t = triangulation.tetrahedra
+            #pmid=zeros(size(t,1),dim);
+            # average points to get mid point of each tetrahedra
+            #pmid = [sum(getindex(p,te))/4 for te in eachindex(t)] # jl
+            # for ii=1:dim+1
+            #     pmid=pmid+p(t(:,ii),:)/(dim+1);
+            # end
+            #t=t(feval(fdist,pmid,varargin{:})<-geps,:);
+            #t=filter!(fdist,pmid,varargin{:})<-geps,:);
             # % 4. Describe each edge by a unique pair of nodes
-            pair=zeros(0,2);
-            localpairs=nchoosek(1:dim+1,2);
-            for ii=1:size(localpairs,1)
-                pair=[pair;t(:,localpairs(ii,:))];
-            end
+            pair = triangulation.edges
+            # pair=zeros(0,2);
+            # localpairs=nchoosek(1:dim+1,2);
+            # for ii=1:size(localpairs,1)
+            #     pair=[pair;t(:,localpairs(ii,:))];
+            # end
             #pair=unique(sort(pair,2),'rows');
-            pair=munique(sort(pair,2))
+            #pair=munique(sort(pair,2)) #jl
             # % 5. Graphical output of the current mesh
             # if dim==2
             # trimesh(t,p(:,1),p(:,2),zeros(N,1))
@@ -78,16 +112,29 @@ function distmeshnd(fdist,fh,h,box,fix)
             # else
             #     disp(sprintf('Retriangulation #%d',count))
             # end
-            count=count+1;
-        end
+            #count=count+1;
+        #end
 
         # 6. Move mesh points based on edge lengths L and forces F
-        bars=p(pair(:,1),:)-p(pair(:,2),:);
-        L=sqrt(sum(bars.^2,2));
-        L0=feval(fh,(p(pair(:,1),:)+p(pair(:,2),:))/2);
-        L0=L0*L0mult*(sum(L.^dim)/sum(L0.^dim))^(1/dim);
-        F=max(L0-L,0);
-        Fbar=[bars,-bars].*repmat(F./L,1,2*dim);
+        # bars=p(pair(:,1),:)-p(pair(:,2),:); # bar vector
+        # L=sqrt(sum(bars.^2,2)); # length
+        # L0=feval(fh,(p(pair(:,1),:)+p(pair(:,2),:))/2);
+        # L0=L0*L0mult*(sum(L.^dim)/sum(L0.^dim))^(1/dim);
+        # F=max(L0-L,0);
+        # Fbar=[bars,-bars].*repmat(F./L,1,2*dim);
+        # dp=full(sparse(pair(:,[ones(1,dim),2*ones(1,dim)]),
+        #                 ones(size(pair,1),1)*[1:dim,1:dim],
+        #                 Fbar,N,dim));
+        # dp(1:size(fix,1),:)=0;
+        # p=p+deltat*dp;
+
+        bars=[p[pb[1]-p[pb[2]] for pb in pair] # bar vector
+        L=[sqrt(sum(b.^2)) for b in bars] # length
+        L0 = map(fh,[(p[pb[1]]+p[pb[2]])./2 for pb in pair])
+        L0=L0*L0mult*(sum(L.^dim)/sum(L0.^dim))^(1/dim)
+        F=max(L0-L,0)
+        # TODO
+        Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
         dp=full(sparse(pair(:,[ones(1,dim),2*ones(1,dim)]),
                         ones(size(pair,1),1)*[1:dim,1:dim],
                         Fbar,N,dim));

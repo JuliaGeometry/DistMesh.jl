@@ -1,19 +1,21 @@
 module DistMesh
 
 using Combinatorics,
-      GeometryTypes,
       Meshing,
       LinearAlgebra,
       StaticArrays,
       TetGen
+using GeometryBasics: Triangle, Tetrahedron, Mesh, Polytope, Point
+import GeometryTypes
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
 include("huniform.jl")
 include("dsphere.jl")
 include("mkt2t.jl")
-include("munique.jl")
-include("distmeshnd.jl")
+#include("distmeshnd.jl")
+include("compat/munique.jl")
+include("compat/delaunayn.jl")
 #include("trisurfupd.jl")
 
 export distmeshsurface
