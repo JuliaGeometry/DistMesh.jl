@@ -1,4 +1,5 @@
-function distmeshnd(fdist,fh,h,box,fix)
+function distmeshnd(fdist,fh,h,box, ::Type{VertType}=Point{3,Float64}; origin=VertType(-1,-1,-1),
+                                                                       widths=VertType(2,2,2), samples=_DEFAULT_SAMPLES) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
     # %   [P,T]=DISTMESHND(FDIST,FH,H,BOX,FIX,FDISTPARAMS)
     # %
@@ -45,10 +46,6 @@ function distmeshnd(fdist,fh,h,box,fix)
     # p=[fix; p(rand(size(p,1),1)<min(r0)^dim./r0.^dim,:)];
     # N=size(p,1);
 
-    VertType=GeometryBasics.Point{3,Float64}
-    origin=VertType(-1,-1,-1)
-    widths=VertType(2,2,2)
-    samples::NTuple{3,T}=_DEFAULT_SAMPLES
     p = VertType[]
 
     nx, ny, nz = samples[1], samples[2], samples[3]
@@ -75,16 +72,17 @@ function distmeshnd(fdist,fh,h,box,fix)
     end
 
     count=0;
-    p0=fill(Point{3,Float64}(Inf),length(p))
+    p0=fill(VertType(Inf),length(p))
     while true
         #% 3. Retriangulation by Delaunay
         if max(sqrt(sum((p-p0).^2,2)))>ttol*h
-            #p0=p;
+            p0=copy(p)
             triangulation=delaunayn(p)
             t = triangulation.tetrahedra
             #pmid=zeros(size(t,1),dim);
             # average points to get mid point of each tetrahedra
-            #pmid = [sum(getindex(p,te))/4 for te in eachindex(t)] # jl
+            # TODO this is hardcoded for 3d
+            pmid = [sum(getindex(p,te))/4 for te in eachindex(t)] # jl
             # for ii=1:dim+1
             #     pmid=pmid+p(t(:,ii),:)/(dim+1);
             # end
@@ -128,34 +126,47 @@ function distmeshnd(fdist,fh,h,box,fix)
         # dp(1:size(fix,1),:)=0;
         # p=p+deltat*dp;
 
-        bars=[p[pb[1]-p[pb[2]] for pb in pair] # bar vector
+        bars=[p[pb[1]]-p[pb[2]] for pb in pair] # bar vector
         L=[sqrt(sum(b.^2)) for b in bars] # length
         L0 = map(fh,[(p[pb[1]]+p[pb[2]])./2 for pb in pair])
         L0=L0*L0mult*(sum(L.^dim)/sum(L0.^dim))^(1/dim)
         F=[max(L0[i]-L[i],0) for i in eachindex(L0)]
         # TODO
-        Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
-        dp=full(sparse(pair(:,[ones(1,dim),2*ones(1,dim)]),
-                        ones(size(pair,1),1)*[1:dim,1:dim],
-                        Fbar,N,dim));
-        dp(1:size(fix,1),:)=0;
-        p=p+deltat*dp;
+        # Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
+        # dp=full(sparse(pair(:,[ones(1,dim),2*ones(1,dim)]),
+        #                 ones(size(pair,1),1)*[1:dim,1:dim],
+        #                 Fbar,N,dim));
+        # dp(1:size(fix,1),:)=0;
+        # p=p+deltat*dp;
+
+        #Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
+        FBar = F./L
+        dp = fill(VertType(0), length(p))
+        # sum up forces
+        for i in eachindex(pair)
+            b1 = pair[1]
+            b2 = pair[2]
+            p[b1] = p[b1] + FBar[i]
+            p[b2] = p[b2] - FBar[i]
+        end
+        #dp(1:size(fix,1),:)=0;
+        p=p.+deltat.*dp # apply displacements to points
 
         # 7. Bring outside points back to the boundary
-        d=feval(fdist,p,varargin{:}); ix=d>0;
-        gradd=zeros(sum(ix),dim);
-        for ii=1:dim
-            a=zeros(1,dim);
-            a(ii)=deps;
-            d1x=feval(fdist,p(ix,:)+ones(sum(ix),1)*a,varargin{:});
-            gradd(:,ii)=(d1x-d(ix))/deps;
-        end
-        p(ix,:)=p(ix,:)-d(ix)*ones(1,dim).*gradd;
+        # d=feval(fdist,p,varargin{:}); ix=d>0;
+        # gradd=zeros(sum(ix),dim);
+        # for ii=1:dim
+        #     a=zeros(1,dim);
+        #     a(ii)=deps;
+        #     d1x=feval(fdist,p(ix,:)+ones(sum(ix),1)*a,varargin{:});
+        #     gradd(:,ii)=(d1x-d(ix))/deps;
+        # end
+        # p(ix,:)=p(ix,:)-d(ix)*ones(1,dim).*gradd;
 
         # 8. Termination criterion
-        maxdp=max(deltat*sqrt(sum(dp(d<-geps,:).^2,2)));
-        if maxdp<ptol*h
-             break
-        end
+        #maxdp=max(deltat*sqrt(sum(dp(d<-geps,:).^2,2)));
+        #if maxdp<ptol*h
+        #     break
+        #end
     end
 end
