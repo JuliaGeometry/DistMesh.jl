@@ -1,3 +1,5 @@
+using PyPlot
+
 function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2), samples=_DEFAULT_SAMPLES) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
@@ -48,21 +50,17 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     p = VertType[]
 
-    nx, ny, nz = samples[1], samples[2], samples[3]
-
-
-    # we subtract one from the length along each axis because
-    # an NxNxN SDF has N-1 cells on each axis
-    s = VertType(widths[1]/(nx-1), widths[2]/(ny-1), widths[3]/(nz-1))
-
-    @inbounds for xi = 0:nx, yi = 0:ny, zi = 0:nz
-        point = VertType(xi,yi,zi) .* s .+ origin
+    @inbounds for _ in 1:reduce(*, samples)
+        point = rand(VertType).*widths + origin
+        @show point
         fdist(point) <= geps && push!(p,point)
     end
-
-    count=0;
+    @show p[1:15]
+    dcount = 0
+    lcount = 0
     p0=fill(VertType(Inf),length(p))
     while true
+        @show dcount, lcount
         #% 3. Retriangulation by Delaunay
         # determine movements
         maxmove = -Inf
@@ -126,7 +124,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             # else
             #     disp(sprintf('Retriangulation #%d',count))
             # end
-            #count=count+1;
+            dcount=dcount+1
         end
 
         # 6. Move mesh points based on edge lengths L and forces F
@@ -162,8 +160,8 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         dp = fill(VertType(0), length(p))
         # sum up forces
         for i in eachindex(pair)
-            b1 = pair[1]
-            b2 = pair[2]
+            b1 = pair[i][1]
+            b2 = pair[i][2]
             p[b1] = p[b1] + FBar[i]
             p[b2] = p[b2] - FBar[i]
         end
@@ -179,8 +177,9 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             dx = (fdist(p[i].+VertType(deps,0,0)) + fdist(p[i].-VertType(deps,0,0)))/deps*2
             dy = (fdist(p[i].+VertType(0,deps,0)) + fdist(p[i].-VertType(0,deps,0)))/deps*2
             dz = (fdist(p[i].+VertType(0,0,deps)) + fdist(p[i].-VertType(0,0,deps)))/deps*2
-            p[i] = p[i] - VertType(dz,dy,dz).*d
+            p[i] = p[i] - normalize(VertType(dz,dy,dz)).*d
         end
+        lcount = lcount + 1
         # gradd=zeros(sum(ix),dim);
         # for ii=1:dim
         #     a=zeros(1,dim);
