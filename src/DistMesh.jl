@@ -5,6 +5,7 @@ using Combinatorics,
       LinearAlgebra,
       StaticArrays,
       TetGen
+using GeometryBasics
 using GeometryBasics: Triangle, Tetrahedron, Mesh, Polytope, Point
 import GeometryTypes
 

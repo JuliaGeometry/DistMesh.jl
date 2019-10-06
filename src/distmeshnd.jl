@@ -22,7 +22,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # %   Copyright (C) 2004-2012 Per-Olof Persson. See COPYRIGHT.TXT for details.
 
     dim=length(VertType)
-    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps)*h;
+    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps())*h;
 
     # # 1. Create initial distribution in bounding box
     # if dim==1
@@ -55,7 +55,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # an NxNxN SDF has N-1 cells on each axis
     s = VertType(widths[1]/(nx-1), widths[2]/(ny-1), widths[3]/(nz-1))
 
-    @inbounds for xi = 1:nx, yi = 1:ny-1, zi = 1:nz-1
+    @inbounds for xi = 0:nx, yi = 0:ny, zi = 0:nz
         point = VertType(xi,yi,zi) .* s .+ origin
         fdist(point) <= geps && push!(p,point)
     end
@@ -64,14 +64,27 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     p0=fill(VertType(Inf),length(p))
     while true
         #% 3. Retriangulation by Delaunay
-        if max(sqrt(sum((p-p0).^2,2)))>ttol*h
+        # determine movements
+        maxmove = -Inf
+        tl = max(length(p),length(p0))
+        for i in 1:tl
+            maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
+        end
+        if maxmove>ttol*h
             p0=copy(p)
             triangulation=delaunayn(p)
-            t = triangulation.tetrahedra
+            t = copy(triangulation.tetrahedra)
             #pmid=zeros(size(t,1),dim);
             # average points to get mid point of each tetrahedra
             # TODO this is hardcoded for 3d
-            pmid = [sum(getindex(p,te))/4 for te in eachindex(t)] # jl
+            #@show t[1:10], t[end-10:end]
+            pmid = VertType[]
+            for te in 1:length(t)
+                #@show t[te]
+                pm = sum(getindex(p,t[te]))/4
+                push!(pmid,pm)
+            end
+            #pmid = [sum(getindex(p,te))/4 for te in eachindex(t)] # jl
             # for ii=1:dim+1
             #     pmid=pmid+p(t(:,ii),:)/(dim+1);
             # end
@@ -132,7 +145,9 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         bars=[p[pb[1]]-p[pb[2]] for pb in pair] # bar vector
         L=[sqrt(sum(b.^2)) for b in bars] # length
         L0 = map(fh,[(p[pb[1]]+p[pb[2]])./2 for pb in pair])
-        L0=L0*L0mult*(sum(L.^dim)/sum(L0.^dim))^(1/dim)
+        for i in 1:length(L0)
+            L0[i] = L0mult*(sum(L[i].^dim)/sum(L0[i].^dim))^(1/dim)
+        end
         F=[max(L0[i]-L[i],0) for i in eachindex(L0)]
         # TODO
         # Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
@@ -157,6 +172,15 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
         # 7. Bring outside points back to the boundary
         # d=feval(fdist,p,varargin{:}); ix=d>0;
+        maxdp = -Inf
+        for i in eachindex(p)
+            d = fdist(p[i])
+            d <= 0 && continue
+            dx = (fdist(p[i].+VertType(deps,0,0)) + fdist(p[i].-VertType(deps,0,0)))/deps*2
+            dy = (fdist(p[i].+VertType(0,deps,0)) + fdist(p[i].-VertType(0,deps,0)))/deps*2
+            dz = (fdist(p[i].+VertType(0,0,deps)) + fdist(p[i].-VertType(0,0,deps)))/deps*2
+            p[i] = p[i] - VertType(dz,dy,dz).*d
+        end
         # gradd=zeros(sum(ix),dim);
         # for ii=1:dim
         #     a=zeros(1,dim);

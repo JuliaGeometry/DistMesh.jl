@@ -3,13 +3,14 @@ using Test
 using FileIO
 using MAT
 
+include("distmeshnd.jl")
+
 # translation utils
 include("munique.jl")
 
 # distmesh utils
 include("mkt2t.jl")
 include("trisurfupd.jl")
-include("distmeshnd.jl")
 
 # @testset "distmeshsurface" begin
 #     fd(p) = dsphere(p,0,0,0,1);
