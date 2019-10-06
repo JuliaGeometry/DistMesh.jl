@@ -20,7 +20,9 @@ include("compat/munique.jl")
 include("compat/delaunayn.jl")
 #include("trisurfupd.jl")
 
-export distmeshsurface
+#export distmeshsurface
 export distmeshnd
+
+export huniform
 
 end # module

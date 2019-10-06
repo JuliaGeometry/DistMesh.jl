@@ -1,4 +1,4 @@
-function distmeshnd(fdist,fh,h,box, ::Type{VertType}=Point{3,Float64}; origin=VertType(-1,-1,-1),
+function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2), samples=_DEFAULT_SAMPLES) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
     # %   [P,T]=DISTMESHND(FDIST,FH,H,BOX,FIX,FDISTPARAMS)
@@ -21,7 +21,7 @@ function distmeshnd(fdist,fh,h,box, ::Type{VertType}=Point{3,Float64}; origin=Ve
 
     # %   Copyright (C) 2004-2012 Per-Olof Persson. See COPYRIGHT.TXT for details.
 
-    dim=size(box,2);
+    dim=length(VertType)
     ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps)*h;
 
     # # 1. Create initial distribution in bounding box
@@ -55,20 +55,9 @@ function distmeshnd(fdist,fh,h,box, ::Type{VertType}=Point{3,Float64}; origin=Ve
     # an NxNxN SDF has N-1 cells on each axis
     s = VertType(widths[1]/(nx-1), widths[2]/(ny-1), widths[3]/(nz-1))
 
-    @inbounds for xi = 1:nx-1, yi = 1:ny-1, zi = 1:nz-1
-
-        points = (VertType(xi-1,yi-1,zi-1) .* s .+ origin,
-                  VertType(xi,yi-1,zi-1) .* s .+ origin,
-                  VertType(xi,yi,zi-1) .* s .+ origin,
-                  VertType(xi-1,yi,zi-1) .* s .+ origin,
-                  VertType(xi-1,yi-1,zi) .* s .+ origin,
-                  VertType(xi,yi-1,zi) .* s .+ origin,
-                  VertType(xi,yi,zi) .* s .+ origin,
-                  VertType(xi-1,yi,zi) .* s .+ origin)
-
-        for i = 1:8
-            fdist(points[i]) <= 0 && push!(p,points[i])
-        end
+    @inbounds for xi = 1:nx, yi = 1:ny-1, zi = 1:nz-1
+        point = VertType(xi,yi,zi) .* s .+ origin
+        fdist(point) <= geps && push!(p,point)
     end
 
     count=0;
@@ -87,14 +76,28 @@ function distmeshnd(fdist,fh,h,box, ::Type{VertType}=Point{3,Float64}; origin=Ve
             #     pmid=pmid+p(t(:,ii),:)/(dim+1);
             # end
             #t=t(feval(fdist,pmid,varargin{:})<-geps,:);
-            #t=filter!(fdist,pmid,varargin{:})<-geps,:);
+            deletes = Int[]
+            for i in eachindex(pmid)
+                fdist(pmid[i]) < -geps && push!(deletes, i)
+            end
+            deleteat!(t, deletes)
             # % 4. Describe each edge by a unique pair of nodes
-            pair = triangulation.edges
-            # pair=zeros(0,2);
-            # localpairs=nchoosek(1:dim+1,2);
+            pair=Vector{Tuple{Int,Int}}()
             # for ii=1:size(localpairs,1)
             #     pair=[pair;t(:,localpairs(ii,:))];
             # end
+            for i in eachindex(t)
+                for ep in ((1,2),(1,3),(1,4),(2,3),(2,4),(3,4))
+                    p1 = t[i][ep[1]]
+                    p2 = t[i][ep[2]]
+                    if p1 > p2
+                        push!(pair, (p2,p1))
+                    else
+                        push!(pair, (p1,p2))
+                    end
+                end
+            end
+            unique!(pair)
             #pair=unique(sort(pair,2),'rows');
             #pair=munique(sort(pair,2)) #jl
             # % 5. Graphical output of the current mesh
