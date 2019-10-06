@@ -70,15 +70,15 @@ function distmeshnd(fdist,fh,h,box,fix)
                   VertType(xi-1,yi,zi) .* s .+ origin)
 
         for i = 1:8
-            f(points[i]) <= 0 && push!(p,points[i])
+            fdist(points[i]) <= 0 && push!(p,points[i])
         end
     end
 
     count=0;
-    #p0=inf;
+    p0=fill(Point{3,Float64}(Inf),length(p))
     while true
         #% 3. Retriangulation by Delaunay
-        #if max(sqrt(sum((p-p0).^2,2)))>ttol*h
+        if max(sqrt(sum((p-p0).^2,2)))>ttol*h
             #p0=p;
             triangulation=delaunayn(p)
             t = triangulation.tetrahedra
@@ -113,7 +113,7 @@ function distmeshnd(fdist,fh,h,box,fix)
             #     disp(sprintf('Retriangulation #%d',count))
             # end
             #count=count+1;
-        #end
+        end
 
         # 6. Move mesh points based on edge lengths L and forces F
         # bars=p(pair(:,1),:)-p(pair(:,2),:); # bar vector
@@ -132,7 +132,7 @@ function distmeshnd(fdist,fh,h,box,fix)
         L=[sqrt(sum(b.^2)) for b in bars] # length
         L0 = map(fh,[(p[pb[1]]+p[pb[2]])./2 for pb in pair])
         L0=L0*L0mult*(sum(L.^dim)/sum(L0.^dim))^(1/dim)
-        F=max(L0-L,0)
+        F=[max(L0[i]-L[i],0) for i in eachindex(L0)]
         # TODO
         Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
         dp=full(sparse(pair(:,[ones(1,dim),2*ones(1,dim)]),
