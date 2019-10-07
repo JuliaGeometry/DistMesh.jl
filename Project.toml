@@ -12,6 +12,7 @@ Meshing = "e6723b4c-ebff-59f1-b4b7-d97aa5274f73"
 PyPlot = "d330b81b-6aea-500a-939a-2ce795aea3ee"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
+WriteVTK = "64499a7a-5c06-52f2-abe2-ccb03c286192"
 
 [compat]
 julia = "1"

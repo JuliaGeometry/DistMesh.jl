@@ -2,6 +2,7 @@ using DistMesh
 using Test
 using FileIO
 using MAT
+using WriteVTK
 
 include("distmeshnd.jl")
 

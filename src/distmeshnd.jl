@@ -52,18 +52,19 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     p = VertType[]
 
     # TODO try to bo back to uniform distribution here
-    #for _ in 1:reduce(*, samples)
-        #point = rand(VertType).*widths + origin
-        #@show point
-        #fdist(point) <= geps && push!(p,point)
-    #end
+    samples = round(reduce(*,widths./h))
+    for _ in 1:samples
+        point = rand(VertType).*widths + origin
+        @show point
+        fdist(point) <= geps && push!(p,point)
+    end
     # we subtract one from the length along each axis because
     # an NxNxN SDF has N-1 cells on each axis
 
-    @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
-        point = VertType(xi,yi,zi)
-        fdist(point) <= geps && push!(p,point)
-    end
+    #@inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
+    #    point = VertType(xi,yi,zi)
+    #    fdist(point) <= geps && push!(p,point)
+    #end
     @show p[1:15]
     dcount = 0
     lcount = 0
@@ -80,7 +81,6 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         end
         @show maxmove, ttol*h
         if maxmove>ttol*h
-            p0=copy(p)
             triangulation=delaunayn(p)
             t = copy(triangulation.tetrahedra)
             #pmid=zeros(size(t,1),dim);
@@ -170,16 +170,17 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         # p=p+deltat*dp;
 
         #Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
-        FBar = (F./L).*bars
+        FBar = bars.*F./L
         #@show FBar[1:15]
         dp = fill(VertType(0), length(p))
         # sum up forces
         for i in eachindex(pair)
             b1 = pair[i][1]
             b2 = pair[i][2]
-            dp[b1] = dp[b1] + FBar[b1]
-            dp[b2] = dp[b2] - FBar[b2]
+            dp[b1] = dp[b1] + FBar[i]
+            dp[b2] = dp[b2] - FBar[i]
         end
+        p0=copy(p)
         #dp(1:size(fix,1),:)=0;
         p=p.+deltat.*dp # apply displacements to points
         #@show dp[1:15]
@@ -190,10 +191,11 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             d = fdist(p[i])
             maxdp = max(maxdp, sqrt(sum(dp[i].^2)))
             d <= 0 && continue
-            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))/(2*deps)
-            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))/(2*deps)
-            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))/(2*deps)
-            grad = normalize(VertType(dz,dy,dz))
+            # this seems to do better with one sided difference, but should check
+            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i]))/deps
+            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i]))/deps
+            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i]))/deps
+            grad = VertType(dz,dy,dz) #normalize?
             #@show d, grad
             #@show p[i]
             p[i] = p[i] - grad.*d
@@ -215,6 +217,6 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         if maxdp<ptol*h
              return p, t
         end
-        lcount >= 1000 && return p,t
+        #lcount >= 100 && return p,t
     end
 end
