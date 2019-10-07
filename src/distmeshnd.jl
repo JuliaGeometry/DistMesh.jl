@@ -1,7 +1,7 @@
 using PyPlot
 
 function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
-                                                                       widths=VertType(2,2,2), samples=_DEFAULT_SAMPLES) where {VertType}
+                                                                       widths=VertType(2,2,2)) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
     # %   [P,T]=DISTMESHND(FDIST,FH,H,BOX,FIX,FDISTPARAMS)
     # %
@@ -24,6 +24,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # %   Copyright (C) 2004-2012 Per-Olof Persson. See COPYRIGHT.TXT for details.
 
     dim=length(VertType)
+    @show dim
     ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps())*h;
 
     # # 1. Create initial distribution in bounding box
@@ -50,15 +51,24 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     p = VertType[]
 
-    for _ in 1:reduce(*, samples)
-        point = rand(VertType).*widths + origin
+    # TODO try to bo back to uniform distribution here
+    #for _ in 1:reduce(*, samples)
+        #point = rand(VertType).*widths + origin
         #@show point
+        #fdist(point) <= geps && push!(p,point)
+    #end
+    # we subtract one from the length along each axis because
+    # an NxNxN SDF has N-1 cells on each axis
+
+    @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
+        point = VertType(xi,yi,zi)
         fdist(point) <= geps && push!(p,point)
     end
-    #@show p[1:15]
+    @show p[1:15]
     dcount = 0
     lcount = 0
     p0=fill(VertType(Inf),length(p))
+    #pair=Vector{Tuple{Int,Int}}()
     while true
         @show dcount, lcount
         #% 3. Retriangulation by Delaunay
@@ -68,6 +78,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in 1:tl
             maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
         end
+        @show maxmove, ttol*h
         if maxmove>ttol*h
             p0=copy(p)
             triangulation=delaunayn(p)
@@ -89,8 +100,9 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             #t=t(feval(fdist,pmid,varargin{:})<-geps,:);
             deletes = Int[]
             for i in eachindex(pmid)
-                fdist(pmid[i]) < -geps && push!(deletes, i)
+                fdist(pmid[i]) > -geps && push!(deletes, i)
             end
+            #@show deletes
             deleteat!(t, deletes)
             # % 4. Describe each edge by a unique pair of nodes
             pair=Vector{Tuple{Int,Int}}()
@@ -139,12 +151,14 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         #                 Fbar,N,dim));
         # dp(1:size(fix,1),:)=0;
         # p=p+deltat*dp;
-
+        #@show pair, p
         bars=[p[pb[1]]-p[pb[2]] for pb in pair] # bar vector
+        #@show bars
         L=[sqrt(sum(b.^2)) for b in bars] # length
         L0 = map(fh,[(p[pb[1]]+p[pb[2]])./2 for pb in pair])
+        #@show L, L0
         for i in 1:length(L0)
-            L0[i] = L0mult*(sum(L[i].^dim)/sum(L0[i].^dim))^(1/dim)
+            L0[i] = L0[i]*L0mult*(sum(L[i].^dim)/sum(L0[i].^dim))^(1/dim)
         end
         F=[max(L0[i]-L[i],0) for i in eachindex(L0)]
         # TODO
@@ -156,14 +170,15 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         # p=p+deltat*dp;
 
         #Fbar=[bars,-bars].*repmat(F./L,1,2*dim)
-        FBar = F./L
+        FBar = (F./L).*bars
+        #@show FBar[1:15]
         dp = fill(VertType(0), length(p))
         # sum up forces
         for i in eachindex(pair)
             b1 = pair[i][1]
             b2 = pair[i][2]
-            dp[b1] = dp[b1] + FBar[i]
-            dp[b2] = dp[b2] - FBar[i]
+            dp[b1] = dp[b1] + FBar[b1]
+            dp[b2] = dp[b2] - FBar[b2]
         end
         #dp(1:size(fix,1),:)=0;
         p=p.+deltat.*dp # apply displacements to points
@@ -200,5 +215,6 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         if maxdp<ptol*h
              return p, t
         end
+        lcount >= 1000 && return p,t
     end
 end

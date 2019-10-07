@@ -9,7 +9,7 @@ using GeometryBasics
 using GeometryBasics: Triangle, Tetrahedron, Mesh, Polytope, Point
 import GeometryTypes
 
-_DEFAULT_SAMPLES = (10,10,10)
+_DEFAULT_SAMPLES = (24,24,24)
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
