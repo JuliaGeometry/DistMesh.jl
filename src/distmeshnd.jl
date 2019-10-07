@@ -50,12 +50,12 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     p = VertType[]
 
-    @inbounds for _ in 1:reduce(*, samples)
+    for _ in 1:reduce(*, samples)
         point = rand(VertType).*widths + origin
-        @show point
+        #@show point
         fdist(point) <= geps && push!(p,point)
     end
-    @show p[1:15]
+    #@show p[1:15]
     dcount = 0
     lcount = 0
     p0=fill(VertType(Inf),length(p))
@@ -126,7 +126,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             # end
             dcount=dcount+1
         end
-
+        #plot(p)
         # 6. Move mesh points based on edge lengths L and forces F
         # bars=p(pair(:,1),:)-p(pair(:,2),:); # bar vector
         # L=sqrt(sum(bars.^2,2)); # length
@@ -162,22 +162,27 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in eachindex(pair)
             b1 = pair[i][1]
             b2 = pair[i][2]
-            p[b1] = p[b1] + FBar[i]
-            p[b2] = p[b2] - FBar[i]
+            dp[b1] = dp[b1] + FBar[i]
+            dp[b2] = dp[b2] - FBar[i]
         end
         #dp(1:size(fix,1),:)=0;
         p=p.+deltat.*dp # apply displacements to points
-
+        #@show dp[1:15]
         # 7. Bring outside points back to the boundary
         # d=feval(fdist,p,varargin{:}); ix=d>0;
         maxdp = -Inf
         for i in eachindex(p)
             d = fdist(p[i])
+            maxdp = max(maxdp, sqrt(sum(dp[i].^2)))
             d <= 0 && continue
-            dx = (fdist(p[i].+VertType(deps,0,0)) + fdist(p[i].-VertType(deps,0,0)))/deps*2
-            dy = (fdist(p[i].+VertType(0,deps,0)) + fdist(p[i].-VertType(0,deps,0)))/deps*2
-            dz = (fdist(p[i].+VertType(0,0,deps)) + fdist(p[i].-VertType(0,0,deps)))/deps*2
-            p[i] = p[i] - normalize(VertType(dz,dy,dz)).*d
+            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))/(2*deps)
+            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))/(2*deps)
+            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))/(2*deps)
+            grad = normalize(VertType(dz,dy,dz))
+            #@show d, grad
+            #@show p[i]
+            p[i] = p[i] - grad.*d
+            #@show p[i], fdist(p[i])
         end
         lcount = lcount + 1
         # gradd=zeros(sum(ix),dim);
@@ -188,11 +193,12 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         #     gradd(:,ii)=(d1x-d(ix))/deps;
         # end
         # p(ix,:)=p(ix,:)-d(ix)*ones(1,dim).*gradd;
-
+        #plot(p)
         # 8. Termination criterion
         #maxdp=max(deltat*sqrt(sum(dp(d<-geps,:).^2,2)));
-        #if maxdp<ptol*h
-        #     break
-        #end
+        @show maxdp, ptol*h
+        if maxdp<ptol*h
+             return p, t
+        end
     end
 end
