@@ -1,5 +1,3 @@
-using PyPlot
-
 function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2)) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
@@ -53,18 +51,18 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     # TODO try to bo back to uniform distribution here
     samples = round(reduce(*,widths./h))
-    for _ in 1:samples
-        point = rand(VertType).*widths + origin
-        @show point
-        fdist(point) <= geps && push!(p,point)
-    end
+    # for _ in 1:samples
+    #     point = rand(VertType).*widths + origin
+    #     @show point
+    #     fdist(point) <= geps && push!(p,point)
+    # end
     # we subtract one from the length along each axis because
     # an NxNxN SDF has N-1 cells on each axis
 
-    #@inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
-    #    point = VertType(xi,yi,zi)
-    #    fdist(point) <= geps && push!(p,point)
-    #end
+    @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
+       point = VertType(xi,yi,zi)
+       fdist(point) <= geps && push!(p,point)
+    end
     @show p[1:15]
     dcount = 0
     lcount = 0
@@ -79,7 +77,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in 1:tl
             maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
         end
-        @show maxmove, ttol*h
+       # @show maxmove, ttol*h
         if maxmove>ttol*h
             triangulation=delaunayn(p)
             t = copy(triangulation.tetrahedra)
@@ -138,6 +136,11 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             # end
             dcount=dcount+1
         end
+        ls = [SVector(p[pair[i][1]]...) => SVector(p[pair[i][2]]...) for i = 1:length(pair)]
+        scene = Makie.linesegments(ls, color = rand(RGB{Float64}, length(pair)))
+        display(scene)
+        #sleep(100)
+        #wireframe!(scene[end][1], color=(:black,0.6), linewidth=2)
         #plot(p)
         # 6. Move mesh points based on edge lengths L and forces F
         # bars=p(pair(:,1),:)-p(pair(:,2),:); # bar vector
@@ -157,9 +160,8 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         L=[sqrt(sum(b.^2)) for b in bars] # length
         L0 = map(fh,[(p[pb[1]]+p[pb[2]])./2 for pb in pair])
         #@show L, L0
-        for i in 1:length(L0)
-            L0[i] = L0[i]*L0mult*(sum(L[i].^dim)/sum(L0[i].^dim))^(1/dim)
-        end
+        L0 = L0.*L0mult.*(sum(L.^dim)/sum(L0.^dim))^(1/dim)
+        @show L0[1:15], L[1:15]
         F=[max(L0[i]-L[i],0) for i in eachindex(L0)]
         # TODO
         # Fbar=[bars,-bars].*repmat(F./L,1,2*dim)

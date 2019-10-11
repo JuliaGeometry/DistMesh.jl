@@ -4,7 +4,10 @@ using Combinatorics,
       Meshing,
       LinearAlgebra,
       StaticArrays,
-      TetGen
+      TetGen,
+      Makie,
+      AbstractPlotting,
+      Colors
 using GeometryBasics
 using GeometryBasics: Triangle, Tetrahedron, Mesh, Polytope, Point
 import GeometryTypes
