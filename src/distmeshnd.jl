@@ -23,7 +23,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     dim=length(VertType)
     @show dim
-    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps())*h;
+    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps());
 
     # # 1. Create initial distribution in bounding box
     # if dim==1
@@ -51,19 +51,19 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     # TODO try to bo back to uniform distribution here
     samples = round(reduce(*,widths./h))
-    # for _ in 1:samples
-    #     point = rand(VertType).*widths + origin
-    #     @show point
-    #     fdist(point) <= geps && push!(p,point)
-    # end
+    for _ in 1:samples
+        point = rand(VertType).*widths + origin
+        @show point
+        fdist(point) <= -h && push!(p,point)
+    end
     # we subtract one from the length along each axis because
     # an NxNxN SDF has N-1 cells on each axis
 
-    @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
-       point = VertType(xi,yi,zi)
-       fdist(point) <= geps && push!(p,point)
-    end
-    @show p[1:15]
+    # @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
+    #    point = VertType(xi,yi,zi)
+    #    fdist(point) <= geps && push!(p,point)
+    # end
+    #@show p[1:15]
     dcount = 0
     lcount = 0
     p0=fill(VertType(Inf),length(p))
@@ -85,20 +85,15 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             # average points to get mid point of each tetrahedra
             # TODO this is hardcoded for 3d
             #@show t[1:10], t[end-10:end]
-            pmid = VertType[]
-            for te in 1:length(t)
-                #@show t[te]
-                pm = sum(getindex(p,t[te]))/4
-                push!(pmid,pm)
-            end
             #pmid = [sum(getindex(p,te))/4 for te in eachindex(t)] # jl
             # for ii=1:dim+1
             #     pmid=pmid+p(t(:,ii),:)/(dim+1);
             # end
             #t=t(feval(fdist,pmid,varargin{:})<-geps,:);
             deletes = Int[]
-            for i in eachindex(pmid)
-                fdist(pmid[i]) > -geps && push!(deletes, i)
+            for i in eachindex(t)
+                pm = sum(getindex(p,t[i]))/4
+                fdist(pm) > -geps && push!(deletes, i)
             end
             #@show deletes
             deleteat!(t, deletes)
@@ -139,6 +134,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         ls = [SVector(p[pair[i][1]]...) => SVector(p[pair[i][2]]...) for i = 1:length(pair)]
         scene = Makie.linesegments(ls, color = rand(RGB{Float64}, length(pair)))
         display(scene)
+        #sleep(2)
         #sleep(100)
         #wireframe!(scene[end][1], color=(:black,0.6), linewidth=2)
         #plot(p)
@@ -179,8 +175,8 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in eachindex(pair)
             b1 = pair[i][1]
             b2 = pair[i][2]
-            dp[b1] = dp[b1] + FBar[i]
-            dp[b2] = dp[b2] - FBar[i]
+            dp[b1] = dp[b1] .+ FBar[i]
+            dp[b2] = dp[b2] .- FBar[i]
         end
         p0=copy(p)
         #dp(1:size(fix,1),:)=0;
@@ -191,12 +187,14 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         maxdp = -Inf
         for i in eachindex(p)
             d = fdist(p[i])
-            maxdp = max(maxdp, sqrt(sum(dp[i].^2)))
+            if d < -geps
+                maxdp= max(maxdp, sqrt(sum(dp[i].^2)))
+            end
             d <= 0 && continue
             # this seems to do better with one sided difference, but should check
-            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i]))/deps
-            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i]))/deps
-            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i]))/deps
+            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))/(2deps)
+            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))/(2deps)
+            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))/(2deps)
             grad = VertType(dz,dy,dz) #normalize?
             #@show d, grad
             #@show p[i]
@@ -219,6 +217,9 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         if maxdp<ptol*h
              return p, t
         end
+        scene = Makie.linesegments(ls, color = rand(RGB{Float64}, length(pair)))
+        display(scene)
+        #sleep(2)
         #lcount >= 100 && return p,t
     end
 end
