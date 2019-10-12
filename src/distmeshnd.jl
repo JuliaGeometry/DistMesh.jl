@@ -50,24 +50,24 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     p = VertType[]
 
     # TODO try to bo back to uniform distribution here
-    samples = round(reduce(*,widths./h))
-    for _ in 1:samples
-        point = rand(VertType).*widths + origin
-        @show point
-        fdist(point) <= -h && push!(p,point)
-    end
+    # samples = round(reduce(*,widths./h))
+    # for _ in 1:samples
+    #     point = rand(VertType).*widths + origin
+    #     @show point
+    #     fdist(point) < -h && push!(p,point)
+    # end
     # we subtract one from the length along each axis because
     # an NxNxN SDF has N-1 cells on each axis
 
-    # @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
-    #    point = VertType(xi,yi,zi)
-    #    fdist(point) <= geps && push!(p,point)
-    # end
+    @inbounds for xi = origin[1]:h*1.5:(origin[1]+widths[1]), yi = origin[2]:h*1.5:(origin[2]+widths[2]), zi = origin[3]:h*1.5:(origin[3]+widths[3])
+       point = VertType(xi,yi,zi)
+       fdist(point) < -h && push!(p,point)
+    end
     #@show p[1:15]
     dcount = 0
     lcount = 0
     p0=fill(VertType(Inf),length(p))
-    #pair=Vector{Tuple{Int,Int}}()
+    pair=Vector{Tuple{Int,Int}}()
     while true
         @show dcount, lcount
         #% 3. Retriangulation by Delaunay
@@ -77,7 +77,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in 1:tl
             maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
         end
-       # @show maxmove, ttol*h
+        @show maxmove, ttol*h
         if maxmove>ttol*h
             triangulation=delaunayn(p)
             t = copy(triangulation.tetrahedra)
@@ -188,17 +188,20 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in eachindex(p)
             d = fdist(p[i])
             if d < -geps
-                maxdp= max(maxdp, sqrt(sum(dp[i].^2)))
+                maxdp= max(maxdp, deltat*sqrt(sum(dp[i].^2)))
             end
             d <= 0 && continue
             # this seems to do better with one sided difference, but should check
             dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))/(2deps)
             dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))/(2deps)
             dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))/(2deps)
-            grad = VertType(dz,dy,dz) #normalize?
+            grad = VertType(dx,dy,dz) #normalize?
             #@show d, grad
             #@show p[i]
             p[i] = p[i] - grad.*d
+            if abs(p[i][1]) >= 1
+                @show p[i]
+            end
             #@show p[i], fdist(p[i])
         end
         lcount = lcount + 1
@@ -217,6 +220,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         if maxdp<ptol*h
              return p, t
         end
+        ls = [SVector(p[pair[i][1]]...) => SVector(p[pair[i][2]]...) for i = 1:length(pair)]
         scene = Makie.linesegments(ls, color = rand(RGB{Float64}, length(pair)))
         display(scene)
         #sleep(2)
