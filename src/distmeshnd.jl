@@ -68,6 +68,11 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     p0=fill(VertType(Inf),length(p))
     pair=Vector{Tuple{Int,Int}}()
     dp = fill(VertType(0), length(p))
+    bars = Vector{VertType}()
+    L = Vector{eltype(VertType)}()
+    L0 = Vector{eltype(VertType)}()
+    F = Vector{eltype(VertType)}()
+    FBar = Vector{VertType}()
     while true
         @show dcount, lcount
         #% 3. Retriangulation by Delaunay
@@ -82,6 +87,8 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             triangulation=delaunayn(p)
             t = copy(triangulation.tetrahedra)
             # average points to get mid point of each tetrahedra
+            # if the mid point of the tetrahedra is outside of
+            # the boundary we remove it.
             # TODO this is hardcoded for 3d
             deletes = Int[]
             for i in eachindex(t)
@@ -104,16 +111,37 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             end
             unique!(pair)
             dcount=dcount+1
+            # resize arrays for new pair counts
+            resize!(bars, length(pair))
+            resize!(L, length(pair))
+            resize!(L0, length(pair))
+            resize!(F, length(pair))
+            resize!(FBar, length(pair))
         end
 
         # 6. Move mesh points based on edge lengths L and forces F
-        bars=[p[pb[1]]-p[pb[2]] for pb in pair] # bar vector
-        L=[sqrt(sum(b.^2)) for b in bars] # length
-        L0 = map(fh,[(p[pb[1]]+p[pb[2]])./2 for pb in pair])
-        L0 = L0.*L0mult.*(sum(L.^dim)/sum(L0.^dim))^(1/dim)
-        F=[max(L0[i]-L[i],0) for i in eachindex(L0)]
+        Lsum = zero(eltype(L))
+        L0sum = zero(eltype(L0))
+        for i in eachindex(pair)
+            pb = pair[i]
+            b1 = p[pb[1]]
+            b2 = p[pb[2]]
+            barvec = b1 - b2 # bar vector
+            bars[i] = barvec
+            L[i] = sqrt(sum(barvec.^2)) # length
+            L0[i] = fh((b1+b2)./2)
+            Lsum = Lsum + L[i].^dim
+            L0sum = L0sum + L0[i].^dim
+        end
+        L0 = L0.*L0mult.*(Lsum/L0sum)^(1/dim)
+        for i in eachindex(L0)
+            F[i] = max(L0[i]-L[i],zero(eltype(L0)))
+        end
 
-        FBar = bars.*F./L
+        # compute bar forces
+        for i in eachindex(L0)
+            FBar[i] = bars[i].*F[i]./L[i]
+        end
         # zero out force at each node
         for i in eachindex(dp)
             dp[i] = VertType(0)
