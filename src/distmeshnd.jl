@@ -23,7 +23,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     dim=length(VertType)
     @show dim
-    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h; deps=sqrt(eps());
+    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h;
 
     # # 1. Create initial distribution in bounding box
     # if dim==1
@@ -144,7 +144,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         end
         # zero out force at each node
         for i in eachindex(dp)
-            dp[i] = VertType(0)
+            dp[i] = zero(VertType)
         end
         # sum up forces
         for i in eachindex(pair)
@@ -162,9 +162,10 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in eachindex(p)
             d = fdist(p[i])
             if d < -geps
-                maxdp= max(maxdp, deltat*sqrt(sum(dp[i].^2)))
+                maxdp = max(maxdp, deltat*sqrt(sum(dp[i].^2)))
             end
             d <= 0 && continue
+            deps = sqrt(eps(d))
             # use central difference
             dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))/(2deps)
             dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))/(2deps)
