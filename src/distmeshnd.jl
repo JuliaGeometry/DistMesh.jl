@@ -67,6 +67,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     lcount = 0
     p0=fill(VertType(Inf),length(p))
     pair=Vector{Tuple{Int,Int}}()
+    dp = fill(VertType(0), length(p))
     while true
         @show dcount, lcount
         #% 3. Retriangulation by Delaunay
@@ -104,9 +105,6 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             unique!(pair)
             dcount=dcount+1
         end
-        ls = [SVector(p[pair[i][1]]...) => SVector(p[pair[i][2]]...) for i = 1:length(pair)]
-        scene = Makie.linesegments(ls)
-        display(scene)
 
         # 6. Move mesh points based on edge lengths L and forces F
         bars=[p[pb[1]]-p[pb[2]] for pb in pair] # bar vector
@@ -116,7 +114,10 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         F=[max(L0[i]-L[i],0) for i in eachindex(L0)]
 
         FBar = bars.*F./L
-        dp = fill(VertType(0), length(p))
+        # zero out force at each node
+        for i in eachindex(dp)
+            dp[i] = VertType(0)
+        end
         # sum up forces
         for i in eachindex(pair)
             b1 = pair[i][1]
@@ -146,6 +147,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         end
         lcount = lcount + 1
         # 8. Termination criterion
+        @show maxdp, ptol*h
         if maxdp<ptol*h
              return p, t
         end
