@@ -66,13 +66,14 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     dcount = 0
     lcount = 0
     p0=fill(VertType(Inf),length(p))
-    pair=Vector{Tuple{Int,Int}}()
+    pair = Tuple{Int,Int}[]
     dp = fill(VertType(0), length(p))
-    bars = Vector{VertType}()
-    L = Vector{eltype(VertType)}()
-    L0 = Vector{eltype(VertType)}()
-    F = Vector{eltype(VertType)}()
-    FBar = Vector{VertType}()
+    bars = VertType[]
+    L = eltype(VertType)[]
+    L0 = eltype(VertType)[]
+    F = eltype(VertType)[]
+    FBar = VertType[]
+    t = GeometryBasics.SimplexFace{4,Int32}[]
     while true
         @show dcount, lcount
         #% 3. Retriangulation by Delaunay
@@ -97,15 +98,16 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             end
             deleteat!(t, deletes)
             # 4. Describe each edge by a unique pair of nodes
-            pair=Vector{Tuple{Int,Int}}()
+            pair=Vector{Tuple{Int,Int}}(undef, length(t)*6)
+
             for i in eachindex(t)
-                for ep in ((1,2),(1,3),(1,4),(2,3),(2,4),(3,4))
-                    p1 = t[i][ep[1]]
-                    p2 = t[i][ep[2]]
+                for ep in 1:6
+                    p1 = t[i][tetpairs[ep][1]]
+                    p2 = t[i][tetpairs[ep][2]]
                     if p1 > p2
-                        push!(pair, (p2,p1))
+                        pair[(i-1)*6+ep] = (p2,p1)
                     else
-                        push!(pair, (p1,p2))
+                        pair[(i-1)*6+ep] = (p1,p2)
                     end
                 end
             end
@@ -175,6 +177,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             p[i] = p[i] - grad.*d
         end
         lcount = lcount + 1
+        @show sum(L)/length(L)
         # 8. Termination criterion
         @show maxdp, ptol*h
         if maxdp<ptol*h
