@@ -23,7 +23,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
     dim=length(VertType)
     @show dim
-    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.1; geps=1e-1*h;
+    ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
     # # 1. Create initial distribution in bounding box
     # if dim==1
@@ -59,12 +59,14 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # we subtract one from the length along each axis because
     # an NxNxN SDF has N-1 cells on each axis
 
-    @inbounds for xi = origin[1]:h*1.5:(origin[1]+widths[1]), yi = origin[2]:h*1.5:(origin[2]+widths[2]), zi = origin[3]:h*1.5:(origin[3]+widths[3])
-      point = VertType(xi,yi,zi)
-      fdist(point) < -h && push!(p,point)
+    @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
+        point = VertType(xi,yi,zi)
+        fdist(point) < 0 && push!(p,point)
     end
     dcount = 0
     lcount = 0
+
+    # initialize arrays
     p0=fill(VertType(Inf),length(p))
     pair = Tuple{Int,Int}[]
     dp = fill(VertType(0), length(p))
@@ -74,8 +76,12 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     F = eltype(VertType)[]
     FBar = VertType[]
     t = GeometryBasics.SimplexFace{4,Int32}[]
+
+    # makie viz
+    ls = Pair{VertType,VertType}[]
+
     while true
-        @show dcount, lcount
+        #@show dcount, lcount
         #% 3. Retriangulation by Delaunay
         # determine movements
         maxmove = -Inf
@@ -83,7 +89,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         for i in 1:tl
             maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
         end
-        @show maxmove, ttol*h
+        #@show maxmove, ttol*h
         if maxmove>ttol*h
             triangulation=delaunayn(p)
             t = copy(triangulation.tetrahedra)
@@ -112,13 +118,24 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
                 end
             end
             unique!(pair)
-            dcount=dcount+1
             # resize arrays for new pair counts
             resize!(bars, length(pair))
             resize!(L, length(pair))
             resize!(L0, length(pair))
             resize!(F, length(pair))
             resize!(FBar, length(pair))
+
+            # makie vis
+            if dcount%5 == 0
+                resize!(ls, length(pair))
+                for i = 1:length(pair)
+                    ls[i] = p[pair[i][1]] => p[pair[i][2]]
+                end
+                scene = Makie.linesegments(ls)
+                display(scene)
+                sleep(0.01)
+            end
+            dcount=dcount+1
         end
 
         # 6. Move mesh points based on edge lengths L and forces F
@@ -177,14 +194,11 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             p[i] = p[i] - grad.*d
         end
         lcount = lcount + 1
-        @show sum(L)/length(L)
         # 8. Termination criterion
-        @show maxdp, ptol*h
+        #@show maxdp, ptol*h
         if maxdp<ptol*h
-             return p, t
+            @show sum(L)/length(L)
+            return p, t
         end
-        ls = [SVector(p[pair[i][1]]...) => SVector(p[pair[i][2]]...) for i = 1:length(pair)]
-        scene = Makie.linesegments(ls)
-        display(scene)
     end
 end
