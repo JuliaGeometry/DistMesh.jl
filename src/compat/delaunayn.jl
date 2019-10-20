@@ -1,4 +1,4 @@
-function delaunayn(points::Vector{Point{3, T}}) where T <: AbstractFloat
+function delaunayn(points)
     tetio = tetrahedralize(TetGen.TetgenIO(points), "Q") # Q- Quiet
     tetio
 end

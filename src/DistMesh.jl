@@ -14,6 +14,13 @@ import GeometryTypes
 _DEFAULT_SAMPLES = (24,24,24)
 const tetpairs = ((1,2),(1,3),(1,4),(2,3),(2,4),(3,4))
 
+struct DistMeshSetup{T}
+    iso::T
+    deltat::T
+    ttol::T
+    ptol::T
+end
+
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
 include("huniform.jl")

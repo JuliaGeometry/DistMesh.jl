@@ -1,5 +1,6 @@
 function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
-                                                                       widths=VertType(2,2,2)) where {VertType}
+                                                                       widths=VertType(2,2,2),
+                                                                       vis=true) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
     # %   [P,T]=DISTMESHND(FDIST,FH,H,BOX,FIX,FDISTPARAMS)
     # %
@@ -22,24 +23,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # %   Copyright (C) 2004-2012 Per-Olof Persson. See COPYRIGHT.TXT for details.
 
     dim=length(VertType)
-    @show dim
     ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
-
-    # # 1. Create initial distribution in bounding box
-    # if dim==1
-    #     p=(box(1):h:box(2))';
-    # else
-    #     cbox=cell(1,dim);
-    #     for ii=1:dim
-    #         cbox{ii}=box(1,ii):h:box(2,ii);
-    #     end
-    #     pp=cell(1,dim);
-    #     [pp{:}]=ndgrid(cbox{:});
-    #     p=zeros(prod(size(pp{1})),dim);
-    #     for ii=1:dim
-    #         p(:,ii)=pp{ii}(:);
-    #     end
-    # end
 
     # # % 2. Remove points outside the region, apply the rejection method
     # p=p(feval(fdist,p,varargin{:})<geps,:);
@@ -47,17 +31,8 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # p=[fix; p(rand(size(p,1),1)<min(r0)^dim./r0.^dim,:)];
     # N=size(p,1);
 
+    # initialize Vertex Arrays
     p = VertType[]
-
-    # TODO try to bo back to uniform distribution here
-    samples = round(reduce(*,widths./(h*1.5)))
-    # for _ in 1:samples
-    #     point = rand(VertType).*widths + origin
-    #     @show point
-    #     fdist(point) < -h && push!(p,point)
-    # end
-    # we subtract one from the length along each axis because
-    # an NxNxN SDF has N-1 cells on each axis
 
     @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
         point = VertType(xi,yi,zi)
@@ -67,9 +42,10 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     lcount = 0
 
     # initialize arrays
-    p0=fill(VertType(Inf),length(p))
+    max_elt = typemax(eltype(VertType))
+    p0=fill(VertType(max_elt,max_elt,max_elt),length(p))
     pair = Tuple{Int,Int}[]
-    dp = fill(VertType(0), length(p))
+    dp = fill(zero(VertType), length(p))
     bars = VertType[]
     L = eltype(VertType)[]
     L0 = eltype(VertType)[]
@@ -80,7 +56,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # makie viz
     ls = Pair{VertType,VertType}[]
 
-    while true
+    @inbounds while true
         #@show dcount, lcount
         #% 3. Retriangulation by Delaunay
         # determine movements
@@ -126,14 +102,16 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             resize!(FBar, length(pair))
 
             # makie vis
-            if dcount%5 == 0
-                resize!(ls, length(pair))
-                for i = 1:length(pair)
-                    ls[i] = p[pair[i][1]] => p[pair[i][2]]
+            if vis
+                if dcount%5 == 0
+                    resize!(ls, length(pair))
+                    for i = 1:length(pair)
+                        ls[i] = p[pair[i][1]] => p[pair[i][2]]
+                    end
+                    scene = Makie.linesegments(ls)
+                    display(scene)
+                    sleep(0.01)
                 end
-                scene = Makie.linesegments(ls)
-                display(scene)
-                sleep(0.01)
             end
             dcount=dcount+1
         end
