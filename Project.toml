@@ -15,7 +15,7 @@ StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
 
 [compat]
-julia = "1"
+julia = ">=1.1"
 
 [extras]
 FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"

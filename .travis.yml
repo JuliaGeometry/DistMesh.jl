@@ -3,9 +3,15 @@ language: julia
 os:
   - linux
   - osx
+  - windows
 julia:
-  - 1.0
+  - 1.1
   - nightly
+branches:
+  only: # Only kick off CI for master and potential merges to master from within PRs
+    - master
+    - /^release-.*$/
+    - /^v\d+\.\d+(\.\d+)?(-\S*)?$/
 matrix:
   allow_failures:
     - julia: nightly
@@ -18,7 +24,7 @@ after_success:
 jobs:
   include:
     - stage: Documentation
-      julia: 1.0
+      julia: 1.1
       script: julia --project=docs -e '
           using Pkg;
           Pkg.develop(PackageSpec(path=pwd()));

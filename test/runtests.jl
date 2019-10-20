@@ -2,6 +2,9 @@ using DistMesh
 using Test
 using MAT
 
+# use makie to visualize triangulations
+_VIS = false
+
 include("distmeshnd.jl")
 
 # translation utils
