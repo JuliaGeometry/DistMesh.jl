@@ -1,9 +1,6 @@
 using DistMesh
 using Test
-using FileIO
 using MAT
-using WriteVTK
-using Makie
 
 include("distmeshnd.jl")
 

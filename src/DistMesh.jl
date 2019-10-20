@@ -1,7 +1,6 @@
 module DistMesh
 
-using Combinatorics,
-      Meshing,
+using Meshing,
       LinearAlgebra,
       StaticArrays,
       TetGen,
