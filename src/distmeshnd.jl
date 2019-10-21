@@ -46,28 +46,21 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     lcount = 0
 
     # initialize arrays
-
-    # p0 stores the previous iteration location
-    # to allow to test for large moves
     max_elt = typemax(eltype(VertType))
-    p0=fill(VertType(max_elt,max_elt,max_elt),length(p))
     pair = Tuple{Int32,Int32}[] # edge indices (Int32 since we use Tetgen)
     dp = fill(zero(VertType), length(p)) # force at each node
     bars = VertType[] # the vector of each edge
     L = eltype(VertType)[] # vector length of each edge
     L0 = eltype(VertType)[] # desired edge length computed by dh (edge length function)
     t = GeometryBasics.SimplexFace{4,Int32}[] # tetrahedra indices from delaunay triangulation
+    maxmove = typemax(eltype(VertType)) # stores an iteration max movement for retriangulation
 
     # makie viz
     ls = Pair{VertType,VertType}[]
 
     @inbounds while true
         # Retriangulation by Delaunay
-        # determine movements
-        maxmove = -Inf
-        for i in eachindex(p)
-            maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
-        end
+
         # if large move, retriangulation
         if maxmove>ttol*h
             triangulation=delaunayn(p)
@@ -160,10 +153,11 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
 
         # apply point forces and
         # bring outside points back to the boundary
-        maxdp = -Inf
+        maxdp = typemin(eltype(VertType))
+        maxmove = typemin(eltype(VertType))
         for i in eachindex(p)
 
-            p0[i] = p[i] # store original point location
+            p0 = p[i] # store original point location
             p[i] = p[i].+deltat.*dp[i] # apply displacements to points
 
             d = fdist(p[i])
@@ -172,7 +166,10 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
                 maxdp = max(maxdp, deltat*sqrt(sum(dp[i].^2)))
             end
 
-            d <= 0 && continue
+            if d <= 0
+                maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove) # determine movements
+                continue
+            end
 
             # bring points back to boundary if outside
             deps = sqrt(eps(d))
@@ -183,6 +180,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             grad = VertType(dx,dy,dz) #normalize?
             # project back to boundary
             p[i] = p[i] - grad.*d
+            maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove)
         end
         lcount = lcount + 1
         # 8. Termination criterion
