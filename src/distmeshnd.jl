@@ -1,5 +1,6 @@
 function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
+                                                                       fix::Vector{VertType}=VertType[],
                                                                        vis=true) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
     # %   [P,T]=DISTMESHND(FDIST,FH,H,BOX,FIX,FDISTPARAMS)
@@ -32,7 +33,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # N=size(p,1);
 
     # initialize Vertex Arrays
-    p = VertType[]
+    p = copy(fix)
 
     @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
         point = VertType(xi,yi,zi)
@@ -149,8 +150,10 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             dp[b2] = dp[b2] .- FBar[i]
         end
 
-        # TODO apply fixed points
-        #dp(1:size(fix,1),:)=0;
+        # Zero out forces on fix points
+        for i in eachindex(fix)
+            dp[i] = zero(VertType)
+        end
 
         # apply point forces and
         # bring outside points back to the boundary
