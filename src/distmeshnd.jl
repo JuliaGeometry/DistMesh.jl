@@ -24,7 +24,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # %   Copyright (C) 2004-2012 Per-Olof Persson. See COPYRIGHT.TXT for details.
 
     dim=length(VertType)
-    ptol=.001; ttol=h/4; L0mult=1+.4/2^(dim-1); deltat=h; geps=1e-1*h;
+    ptol=.001; ttol=0.05; L0mult=1+.4/2^(dim-1); deltat=0.2; geps=1e-1*h;
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
     # # % 2. Remove points outside the region, apply the rejection method
@@ -142,7 +142,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         end
 
         for i in eachindex(pair)
-            L0_f = L0[i].*L0mult.*(Lsum/L0sum)^(1/dim)
+            L0_f = L0[i].*L0mult.*cbrt(Lsum/L0sum)
             # compute force vectors
             F = max(L0_f-L[i],zero(eltype(L0)))
             FBar = bars[i].*F./L[i]
