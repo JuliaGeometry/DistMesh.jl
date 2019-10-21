@@ -70,17 +70,20 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         # if large move, retriangulation
         if maxmove>ttol*h
             triangulation=delaunayn(p)
-            t = copy(triangulation.tetrahedra)
+            t_d = triangulation.tetrahedra
+            resize!(t, length(t_d))
+            for i in eachindex(t_d)
+                t[i] = t_d[i]
+            end
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
             # TODO this is hardcoded for 3d
-            deletes = Int[]
-            for i in eachindex(t)
-                pm = sum(getindex(p,t[i]))/4
-                fdist(pm) > -geps && push!(deletes, i)
+            filter!(t) do i
+                pm = sum(getindex(p,i))/4
+                fdist(pm) <= -geps
             end
-            deleteat!(t, deletes)
+
             # 4. Describe each edge by a unique pair of nodes
             pair=resize!(pair, length(t)*6)
 
@@ -184,6 +187,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         # 8. Termination criterion
         #@show maxdp, ptol*h
         if maxdp<ptol*h
+            @show dcount, lcount
             @show sum(L)/length(L)
             return p, t
         end
