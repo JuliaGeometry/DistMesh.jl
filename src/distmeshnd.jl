@@ -33,6 +33,8 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # N=size(p,1);
 
     # initialize Vertex Arrays
+    # the first N points in the array correspond to
+    # 'fix' points that do not move
     p = copy(fix)
 
     @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
@@ -43,28 +45,29 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     lcount = 0
 
     # initialize arrays
+
+    # p0 stores the previous iteration location
+    # to allow to test for large moves
     max_elt = typemax(eltype(VertType))
     p0=fill(VertType(max_elt,max_elt,max_elt),length(p))
-    pair = Tuple{UInt32,UInt32}[]
-    dp = fill(zero(VertType), length(p))
-    bars = VertType[]
-    L = eltype(VertType)[]
-    L0 = eltype(VertType)[]
-    FBar = VertType[]
-    t = GeometryBasics.SimplexFace{4,Int32}[]
+    pair = Tuple{Int32,Int32}[] # edge indices (Int32 since we use Tetgen)
+    dp = fill(zero(VertType), length(p)) # force at each node
+    bars = VertType[] # the vector of each edge
+    L = eltype(VertType)[] # vector length of each edge
+    L0 = eltype(VertType)[] # desired edge length computed by dh (edge length function)
+    t = GeometryBasics.SimplexFace{4,Int32}[] # tetrahedra indices from delaunay triangulation
 
     # makie viz
     ls = Pair{VertType,VertType}[]
 
     @inbounds while true
-        #@show dcount, lcount
-        #% 3. Retriangulation by Delaunay
+        # Retriangulation by Delaunay
         # determine movements
         maxmove = -Inf
-        for i in 1eachindex(p)
+        for i in eachindex(p)
             maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
         end
-        #@show maxmove, ttol*h
+        # if large move, retriangulation
         if maxmove>ttol*h
             triangulation=delaunayn(p)
             t = copy(triangulation.tetrahedra)
@@ -98,7 +101,6 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             resize!(bars, length(pair))
             resize!(L, length(pair))
             resize!(L0, length(pair))
-            resize!(FBar, length(pair))
 
             # makie vis
             if vis
@@ -130,24 +132,21 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             L0sum = L0sum + L0[i].^dim
         end
 
-        for i in eachindex(L0)
-            L0_f = L0[i].*L0mult.*(Lsum/L0sum)^(1/dim)
-            # compute force vectors
-            F = max(L0_f-L[i],zero(eltype(L0)))
-            FBar[i] = bars[i].*F./L[i]
-        end
-
         # zero out force at each node
         for i in eachindex(dp)
             dp[i] = zero(VertType)
         end
 
-        # sum up forces
         for i in eachindex(pair)
+            L0_f = L0[i].*L0mult.*(Lsum/L0sum)^(1/dim)
+            # compute force vectors
+            F = max(L0_f-L[i],zero(eltype(L0)))
+            FBar = bars[i].*F./L[i]
+            # add the force vector to the node
             b1 = pair[i][1]
             b2 = pair[i][2]
-            dp[b1] = dp[b1] .+ FBar[i]
-            dp[b2] = dp[b2] .- FBar[i]
+            dp[b1] = dp[b1] .+ FBar
+            dp[b2] = dp[b2] .- FBar
         end
 
         # Zero out forces on fix points
