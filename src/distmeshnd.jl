@@ -44,12 +44,11 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # initialize arrays
     max_elt = typemax(eltype(VertType))
     p0=fill(VertType(max_elt,max_elt,max_elt),length(p))
-    pair = Tuple{Int,Int}[]
+    pair = Tuple{UInt32,UInt32}[]
     dp = fill(zero(VertType), length(p))
     bars = VertType[]
     L = eltype(VertType)[]
     L0 = eltype(VertType)[]
-    F = eltype(VertType)[]
     FBar = VertType[]
     t = GeometryBasics.SimplexFace{4,Int32}[]
 
@@ -61,8 +60,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
         #% 3. Retriangulation by Delaunay
         # determine movements
         maxmove = -Inf
-        tl = max(length(p),length(p0))
-        for i in 1:tl
+        for i in 1eachindex(p)
             maxmove = max(sqrt(sum((p[i]-p0[i]).^2)),maxmove)
         end
         #@show maxmove, ttol*h
@@ -80,7 +78,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             end
             deleteat!(t, deletes)
             # 4. Describe each edge by a unique pair of nodes
-            pair=Vector{Tuple{Int,Int}}(undef, length(t)*6)
+            pair=resize!(pair, length(t)*6)
 
             for i in eachindex(t)
                 for ep in 1:6
@@ -93,12 +91,12 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
                     end
                 end
             end
+            sort!(pair)
             unique!(pair)
             # resize arrays for new pair counts
             resize!(bars, length(pair))
             resize!(L, length(pair))
             resize!(L0, length(pair))
-            resize!(F, length(pair))
             resize!(FBar, length(pair))
 
             # makie vis
@@ -130,19 +128,19 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             Lsum = Lsum + L[i].^dim
             L0sum = L0sum + L0[i].^dim
         end
-        L0 = L0.*L0mult.*(Lsum/L0sum)^(1/dim)
+
         for i in eachindex(L0)
-            F[i] = max(L0[i]-L[i],zero(eltype(L0)))
+            L0_f = L0[i].*L0mult.*(Lsum/L0sum)^(1/dim)
+            # compute force vectors
+            F = max(L0_f-L[i],zero(eltype(L0)))
+            FBar[i] = bars[i].*F./L[i]
         end
 
-        # compute bar forces
-        for i in eachindex(L0)
-            FBar[i] = bars[i].*F[i]./L[i]
-        end
         # zero out force at each node
         for i in eachindex(dp)
             dp[i] = zero(VertType)
         end
+
         # sum up forces
         for i in eachindex(pair)
             b1 = pair[i][1]
@@ -150,18 +148,27 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
             dp[b1] = dp[b1] .+ FBar[i]
             dp[b2] = dp[b2] .- FBar[i]
         end
-        p0=copy(p)
+
         # TODO apply fixed points
         #dp(1:size(fix,1),:)=0;
-        p=p.+deltat.*dp # apply displacements to points
-        # 7. Bring outside points back to the boundary
+
+        # apply point forces and
+        # bring outside points back to the boundary
         maxdp = -Inf
         for i in eachindex(p)
+
+            p0[i] = p[i] # store original point location
+            p[i] = p[i].+deltat.*dp[i] # apply displacements to points
+
             d = fdist(p[i])
+
             if d < -geps
                 maxdp = max(maxdp, deltat*sqrt(sum(dp[i].^2)))
             end
+
             d <= 0 && continue
+
+            # bring points back to boundary if outside
             deps = sqrt(eps(d))
             # use central difference
             dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))/(2deps)
