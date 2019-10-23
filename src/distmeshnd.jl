@@ -1,7 +1,8 @@
 function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
-                                                                       vis=true) where {VertType}
+                                                                       vis=true,
+                                                                       distribution=:regular) where {VertType}
     # %DISTMESHND N-D Mesh Generator using Distance Functions.
     # %   [P,T]=DISTMESHND(FDIST,FH,H,BOX,FIX,FDISTPARAMS)
     # %
@@ -24,7 +25,7 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # %   Copyright (C) 2004-2012 Per-Olof Persson. See COPYRIGHT.TXT for details.
 
     dim=length(VertType)
-    ptol=.001; ttol=0.05; L0mult=1+.4/2^(dim-1); deltat=0.2; geps=1e-1*h;
+    ptol=.001; ttol=0.02; L0mult=1+.4/2^(dim-1); deltat=0.05; geps=1e-1*h;
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
     # # % 2. Remove points outside the region, apply the rejection method
@@ -38,9 +39,19 @@ function distmeshnd(fdist,fh,h, ::Type{VertType}=GeometryBasics.Point{3,Float64}
     # 'fix' points that do not move
     p = copy(fix)
 
-    @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
-        point = VertType(xi,yi,zi)
-        fdist(point) < 0 && push!(p,point)
+    if distribution == :regular
+        @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
+            point = VertType(xi,yi,zi)
+            fdist(point) < 0 && push!(p,point)
+        end
+    elseif distribution == :packed
+        # face-centered cubic point distribution
+        r = h/2
+        counts = round.(widths./h).+2
+        @inbounds for xi = -1:Int(counts[1]), yi = -1:Int(counts[2]), zi = -1:Int(counts[3])
+            point = VertType(2xi+((yi+zi)%2), sqrt(3)*(yi+(zi%2)/3),2*sqrt(6)*zi/3).*r + origin
+            fdist(point) < 0 && push!(p,point)
+        end
     end
     dcount = 0
     lcount = 0
