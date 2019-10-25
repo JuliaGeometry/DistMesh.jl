@@ -3,10 +3,7 @@ module DistMesh
 using Meshing,
       LinearAlgebra,
       StaticArrays,
-      TetGen,
-      Makie,
-      AbstractPlotting,
-      Colors
+      TetGen
 using GeometryBasics
 using GeometryBasics: Triangle, Tetrahedron, Mesh, Polytope, Point
 import GeometryTypes
