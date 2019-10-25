@@ -15,7 +15,7 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmeshnd(fdist::Function,fh::Function,h::Number, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
+function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
                                                                        vis=true,

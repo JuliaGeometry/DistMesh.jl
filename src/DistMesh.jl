@@ -31,7 +31,7 @@ include("compat/delaunayn.jl")
 #include("trisurfupd.jl")
 
 #export distmeshsurface
-export distmeshnd
+export distmesh
 
 export huniform
 
