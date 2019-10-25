@@ -64,7 +64,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
     maxmove = typemax(eltype(VertType)) # stores an iteration max movement for retriangulation
 
     # makie viz
-    ls = Pair{VertType,VertType}[]
+    #ls = Pair{VertType,VertType}[]
 
     @inbounds while true
         # Retriangulation by Delaunay
@@ -108,17 +108,17 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
             resize!(L0, length(pair))
 
             # makie vis
-            if vis
-                if dcount%5 == 0
-                    resize!(ls, length(pair))
-                    for i = 1:length(pair)
-                        ls[i] = p[pair[i][1]] => p[pair[i][2]]
-                    end
-                    scene = Makie.linesegments(ls)
-                    display(scene)
-                    sleep(0.01)
-                end
-            end
+            # if vis
+            #     if dcount%5 == 0
+            #         resize!(ls, length(pair))
+            #         for i = 1:length(pair)
+            #             ls[i] = p[pair[i][1]] => p[pair[i][2]]
+            #         end
+            #         scene = Makie.linesegments(ls)
+            #         display(scene)
+            #         sleep(0.01)
+            #     end
+            # end
             dcount=dcount+1
         end
 
