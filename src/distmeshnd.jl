@@ -37,18 +37,10 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
     p = copy(fix)
 
     if distribution == :regular
-        @inbounds for xi = origin[1]:h:(origin[1]+widths[1]), yi = origin[2]:h:(origin[2]+widths[2]), zi = origin[3]:h:(origin[3]+widths[3])
-            point = VertType(xi,yi,zi)
-            fdist(point) < 0 && push!(p,point)
-        end
+        simplecubic!(fdist, p, h, origin, widths, VertType)
     elseif distribution == :packed
         # face-centered cubic point distribution
-        r = h/2
-        counts = round.(widths./h).+2
-        @inbounds for xi = -1:Int(counts[1]), yi = -1:Int(counts[2]), zi = -1:Int(counts[3])
-            point = VertType(2xi+((yi+zi)%2), sqrt(3)*(yi+(zi%2)/3),2*sqrt(6)*zi/3).*r + origin
-            fdist(point) < 0 && push!(p,point)
-        end
+        facecenteredcubic!(fdist, p, h, origin, widths, VertType)
     end
     dcount = 0
     lcount = 0

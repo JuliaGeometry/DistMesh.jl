@@ -20,6 +20,7 @@ end
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
+include("pointdistribution.jl")
 include("huniform.jl")
 include("mkt2t.jl")
 include("distmeshnd.jl")
