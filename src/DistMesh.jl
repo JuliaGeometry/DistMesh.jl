@@ -25,7 +25,7 @@ include("huniform.jl")
 include("mkt2t.jl")
 include("distmeshnd.jl")
 include("compat/munique.jl")
-include("compat/delaunayn.jl")
+include("tetgen.jl")
 #include("trisurfupd.jl")
 
 #export distmeshsurface
