@@ -186,6 +186,17 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
         end
         lcount = lcount + 1
         # 8. Termination criterion
+
+        # save iteration stats
+        if stats
+            push!(statsdata.maxmove,maxmove)
+            push!(statsdata.maxdp,maxdp)
+            qual = triangle_qualities(p,t)
+            push!(statsdata.average_qual, sum(qual)/length(qual))
+            push!(statsdata.median_qual, qual[round(Int,length(qual)/2)])
+            statsdata.num_triangulations = dcount
+            statsdata.num_iterations = lcount
+        end
         #@show maxdp, ptol*h
         if maxdp<ptol*h
             @show dcount, lcount

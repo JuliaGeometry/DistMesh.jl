@@ -12,3 +12,15 @@ function triqual(p1, p2, p3)
     den = dot(d12,d12) + dot(d13,d13) + dot(d23,d23)
     return sqrt(3)*4*vol/den
 end
+
+function triangle_qualities(p,tets)
+    tris = NTuple{3,Int}[]
+    tets_to_tris!(tris, tets)
+    qualities = Vector{Float64}(undef,length(tris))
+    for i in eachindex(tris)
+        tp = tris[i]
+        qualities[i] = triqual(p[tp[1]], p[tp[2]], p[tp[3]])
+    end
+    qualities
+end
+

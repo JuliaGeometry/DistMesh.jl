@@ -19,13 +19,17 @@ struct DistMeshSetup{T}
     ptol::T
 end
 
-struct DistMeshStatistics{T}
+mutable struct DistMeshStatistics{T}
     maxmove::Vector{T}
     maxdp::Vector{T}
     average_qual::Vector{T}
+    median_qual::Vector{T}
     num_triangulations::Int
     num_iterations::Int
 end
+
+DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],0,0)
+
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
