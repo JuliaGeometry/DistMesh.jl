@@ -71,6 +71,14 @@ end
 
 end
 
+@testset "decompositions" begin
+    @testset "tets to triangles" begin
+        simps = [[4,3,2,1],[5,4,3,2],[1,2,3,4]]
+        tris = Tuple{Int,Int,Int}[]
+        DistMesh.tets_to_tris!(tris,simps)
+        @test tris == [(1, 2, 3), (1, 2, 4), (1, 3, 4), (2, 3, 4), (2, 3, 5), (2, 4, 5), (3, 4, 5)]
+    end
+end
 
 # @testset "distmeshsurface" begin
 #     fd(p) = dsphere(p,0,0,0,1);
