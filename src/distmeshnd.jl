@@ -57,9 +57,6 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
     t = GeometryBasics.SimplexFace{4,Int32}[] # tetrahedra indices from delaunay triangulation
     maxmove = typemax(eltype(VertType)) # stores an iteration max movement for retriangulation
 
-    # makie viz
-    #ls = Pair{VertType,VertType}[]
-
     @inbounds while true
         # Retriangulation by Delaunay
 
@@ -74,7 +71,6 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
-            # TODO this is hardcoded for 3d
             filter!(t) do i
                 pm = sum(getindex(p,i))/4
                 fdist(pm) <= -geps
@@ -101,19 +97,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
             resize!(L, length(pair))
             resize!(L0, length(pair))
 
-            # makie vis
-            # if vis
-            #     if dcount%5 == 0
-            #         resize!(ls, length(pair))
-            #         for i = 1:length(pair)
-            #             ls[i] = p[pair[i][1]] => p[pair[i][2]]
-            #         end
-            #         scene = Makie.linesegments(ls)
-            #         display(scene)
-            #         sleep(0.01)
-            #     end
-            # end
-            dcount=dcount+1
+            stats && push!(statsdata.retriangulations, lcount)
         end
 
         # 6. Move mesh points based on edge lengths L and forces F
@@ -184,23 +168,22 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
             p[i] = p[i] - grad.*d
             maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove)
         end
+
+        # increment iteration counter
         lcount = lcount + 1
-        # 8. Termination criterion
 
         # save iteration stats
         if stats
             push!(statsdata.maxmove,maxmove)
             push!(statsdata.maxdp,maxdp)
             qual = triangle_qualities(p,t)
+            sort!(qual) # sort for median calc and robust summation
             push!(statsdata.average_qual, sum(qual)/length(qual))
             push!(statsdata.median_qual, qual[round(Int,length(qual)/2)])
-            statsdata.num_triangulations = dcount
-            statsdata.num_iterations = lcount
         end
-        #@show maxdp, ptol*h
+
+        # 8. Termination criterion
         if maxdp<ptol*h
-            @show dcount, lcount
-            @show sum(L)/length(L)
             return p, t
         end
     end

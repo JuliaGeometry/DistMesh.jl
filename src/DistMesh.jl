@@ -19,16 +19,20 @@ struct DistMeshSetup{T}
     ptol::T
 end
 
-mutable struct DistMeshStatistics{T}
-    maxmove::Vector{T}
-    maxdp::Vector{T}
+"""
+    DistMeshStatistics
+
+        Statistics about the convergence between iterations
+"""
+struct DistMeshStatistics{T}
+    maxmove::Vector{T} # max point move in an iteration
+    maxdp::Vector{T} # max displacmeent induced by an edge
     average_qual::Vector{T}
     median_qual::Vector{T}
-    num_triangulations::Int
-    num_iterations::Int
+    retriangulations::Vector{Int} # Iteration num where retriangulation occured
 end
 
-DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],0,0)
+DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[])
 
 
 #include("circumcenter.jl")
