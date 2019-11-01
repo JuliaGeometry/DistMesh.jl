@@ -79,7 +79,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
             end
 
             # 4. Describe each edge by a unique pair of nodes
-            pair=resize!(pair, length(t)*6)
+            resize!(pair, length(t)*6)
 
             for i in eachindex(t)
                 for ep in 1:6
