@@ -26,6 +26,7 @@ include("mkt2t.jl")
 include("distmeshnd.jl")
 include("compat/munique.jl")
 include("tetgen.jl")
+include("quality.jl")
 #include("trisurfupd.jl")
 
 #export distmeshsurface

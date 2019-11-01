@@ -61,6 +61,16 @@ end
 
 end
 
+@testset "quality analysis" begin
+    @testset "triangles" begin
+        @test DistMesh.triqual([0,0,0],[1,0,0],[0,1,0]) == DistMesh.triqual([0,0,0],[2,0,0],[0,2,0])
+        @test DistMesh.triqual([0,0,0],[1,0,1],[0,1,1]) == DistMesh.triqual([0,0,0],[2,0,2],[0,2,2])
+        @test DistMesh.triqual([0,0,0],[2,0,0],[1,sqrt(3),0]) ≈ 1
+        @test DistMesh.triqual([0,0,0],[1,sqrt(3),0],[2,0,0]) ≈ 1
+    end
+
+end
+
 
 # @testset "distmeshsurface" begin
 #     fd(p) = dsphere(p,0,0,0,1);
