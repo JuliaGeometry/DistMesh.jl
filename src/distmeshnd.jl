@@ -19,6 +19,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
                                                                        vis=true,
+                                                                       stats=false,
+                                                                       statsdata=nothing, # mutable statistics struct
                                                                        distribution=:regular) where {VertType}
 
     dim=length(VertType)
@@ -63,7 +65,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
 
         # if large move, retriangulation
         if maxmove>ttol*h
-            triangulation=delaunayn(p)
+            triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
             for i in eachindex(t_d)
