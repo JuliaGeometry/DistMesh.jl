@@ -24,7 +24,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
     ptol=setup.ptol
     L0mult=1+.4/2^2
     deltat=setup.deltat
-    geps=1e-1*h
+    geps=1e-1*h+setup.iso
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
     # # % 2. Remove points outside the region, apply the rejection method
@@ -160,7 +160,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
                 maxdp = max(maxdp, deltat*sqrt(sum(dp[i].^2)))
             end
 
-            if d <= 0
+            if d <= setup.iso
                 maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove) # determine movements
                 continue
             end
@@ -173,7 +173,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))/(2deps)
             grad = VertType(dx,dy,dz) #normalize?
             # project back to boundary
-            p[i] = p[i] - grad.*d
+            p[i] = p[i] - grad.*(d+setup.iso)
             maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove)
         end
 
