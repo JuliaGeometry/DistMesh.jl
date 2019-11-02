@@ -57,6 +57,11 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
     t = GeometryBasics.SimplexFace{4,Int32}[] # tetrahedra indices from delaunay triangulation
     maxmove = typemax(eltype(VertType)) # stores an iteration max movement for retriangulation
 
+    # array for tracking quality metrics
+    tris = NTuple{3,Int32}[] # array to store triangles used for quality checks
+    qualities = eltype(VertType)[]
+    #maxmoves = eltype(VertType)[]
+
     @inbounds while true
         # Retriangulation by Delaunay
 
@@ -176,10 +181,10 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
         if stats
             push!(statsdata.maxmove,maxmove)
             push!(statsdata.maxdp,maxdp)
-            qual = triangle_qualities(p,t)
-            sort!(qual) # sort for median calc and robust summation
-            push!(statsdata.average_qual, sum(qual)/length(qual))
-            push!(statsdata.median_qual, qual[round(Int,length(qual)/2)])
+            triangle_qualities!(tris,qualities,p,t)
+            sort!(qualities) # sort for median calc and robust summation
+            push!(statsdata.average_qual, sum(qualities)/length(qualities))
+            push!(statsdata.median_qual, qualities[round(Int,length(qualities)/2)])
         end
 
         # 8. Termination criterion
