@@ -20,7 +20,6 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
                                                                        fix::Vector{VertType}=VertType[],
                                                                        vis=true,
                                                                        stats=false,
-                                                                       statsdata=nothing, # mutable statistics struct
                                                                        distribution=:regular) where {VertType}
 
     dim=length(VertType)
@@ -61,6 +60,9 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
     tris = NTuple{3,Int32}[] # array to store triangles used for quality checks
     qualities = eltype(VertType)[]
     #maxmoves = eltype(VertType)[]
+
+    # information on each iteration
+    statsdata = DistMeshStatistics()
 
     @inbounds while true
         # Retriangulation by Delaunay
@@ -189,7 +191,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
 
         # 8. Termination criterion
         if maxdp<ptol*h
-            return p, t
+            return p, t, statsdata
         end
     end
 end
