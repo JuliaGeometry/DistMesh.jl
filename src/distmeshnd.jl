@@ -24,7 +24,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
                                                                        distribution=:regular) where {VertType}
 
     dim=length(VertType)
-    ptol=.001; ttol=0.02; L0mult=1+.4/2^(dim-1); deltat=0.05; geps=1e-1*h;
+    ptol=.001; ttol=0.1; L0mult=1+.4/2^(dim-1); deltat=0.2; geps=1e-1*h;
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
     # # % 2. Remove points outside the region, apply the rejection method
@@ -44,7 +44,6 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
         # face-centered cubic point distribution
         facecenteredcubic!(fdist, p, h, origin, widths, VertType)
     end
-    dcount = 0
     lcount = 0
 
     # initialize arrays
@@ -60,13 +59,14 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
     # array for tracking quality metrics
     tris = NTuple{3,Int32}[] # array to store triangles used for quality checks
     qualities = eltype(VertType)[]
-    #maxmoves = eltype(VertType)[]
+    maxmove_arr = eltype(VertType)[]
 
+    force_iterations = 0
     @inbounds while true
         # Retriangulation by Delaunay
 
         # if large move, retriangulation
-        if maxmove>ttol*h
+        if lcount < 7 && maxmove > ttol*h || force_iterations >=2 && maxmove > sum(maxmove_arr[end-6:end-1])/6
             triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
@@ -103,8 +103,9 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
             resize!(L0, length(pair))
 
             stats && push!(statsdata.retriangulations, lcount)
+            force_iterations = 0
         end
-
+        force_iterations = force_iterations + 1
         # 6. Move mesh points based on edge lengths L and forces F
         Lsum = zero(eltype(L))
         L0sum = zero(eltype(L0))
@@ -176,7 +177,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
 
         # increment iteration counter
         lcount = lcount + 1
-
+        push!(maxmove_arr, maxmove)
         # save iteration stats
         if stats
             push!(statsdata.maxmove,maxmove)
