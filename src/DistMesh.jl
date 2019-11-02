@@ -26,14 +26,22 @@ struct DistMeshSetup{T,RT}
     ptol::T
 end
 
+function DistMeshSetup(;iso=0,ptol=.001,deltat=0.05,retriangulation_criteria=RetriangulateMaxMove(0.02))
+    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat))
+    DistMeshSetup{T,typeof(retriangulation_criteria)}(iso,deltat,retriangulation_criteria,ptol)
+end
+
 abstract type AbstractRetriangulationCriteria end
 
+"""
+    retriangulate if a move over a given tolerance occurs
+"""
 struct RetriangulateMaxMove{T} <: AbstractRetriangulationCriteria
     ttol::T
 end
 
 """
-    retriangulate on a positive delta over N moves, after M iterations
+    retriangulate on a positive delta over N moves, after M force iterations
 """
 struct RetriangulateMaxMoveDelta <: AbstractRetriangulationCriteria
     move_count::Int

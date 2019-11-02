@@ -4,19 +4,16 @@ using MAT
 using GeometryTypes
 using StaticArrays
 
-# use makie to visualize triangulations
-_VIS = false
-
 
 @testset "distmesh 3D" begin
     d(p) = sqrt(sum(p.^2))-1
-    p,t,_ = distmesh(d,huniform,0.2, vis=_VIS)
+    p,t,_ = distmesh(d,huniform,0.2)
     @test length(p) == 485
     @test length(t) == 2207
 
-    p,t,_ = distmesh(d,huniform,0.2, vis=_VIS, distribution=:packed)
+    p,t,_ = distmesh(d,huniform,0.2, distribution=:packed)
     @test length(p) == 742
-    @test_broken length(t) == 3455 #3453 on unix?
+    @test length(t) == 3455
 end
 
 
@@ -44,7 +41,7 @@ end
     @testset "simple cubic" begin
         pts = []
         f(x) = -1
-        DistMesh.simplecubic!(f, pts, 0.5, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
+        DistMesh.simplecubic!(f, pts, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
         @test length(pts) == 27
         @test isapprox(vlen(pts[1],pts[2]),0.5)
         @test length(pts) == length(unique(pts))
@@ -53,7 +50,7 @@ end
     @testset "face centered cubic" begin
     pts = []
     f(x) = -1
-    DistMesh.facecenteredcubic!(f, pts, 0.5, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
+    DistMesh.facecenteredcubic!(f, pts, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
     @test length(pts) == 216
     @test isapprox(vlen(pts[1],pts[2]),0.5)
     @test length(pts) == length(unique(pts))

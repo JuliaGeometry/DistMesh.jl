@@ -15,15 +15,16 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
+function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T,ReTri}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
-                                                                       vis=true,
                                                                        stats=false,
-                                                                       distribution=:regular) where {VertType}
+                                                                       distribution=:regular) where {VertType, T, ReTri}
 
-    dim=length(VertType)
-    ptol=.001; ttol=0.02; L0mult=1+.4/2^(dim-1); deltat=0.05; geps=1e-1*h;
+    ptol=setup.ptol
+    L0mult=1+.4/2^2
+    deltat=setup.deltat
+    geps=1e-1*h
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
     # # % 2. Remove points outside the region, apply the rejection method
@@ -38,10 +39,10 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
     p = copy(fix)
 
     if distribution == :regular
-        simplecubic!(fdist, p, h, origin, widths, VertType)
+        simplecubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     elseif distribution == :packed
         # face-centered cubic point distribution
-        facecenteredcubic!(fdist, p, h, origin, widths, VertType)
+        facecenteredcubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     end
     dcount = 0
     lcount = 0
@@ -68,7 +69,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
         # Retriangulation by Delaunay
 
         # if large move, retriangulation
-        if maxmove>ttol*h
+        if ReTri <: RetriangulateMaxMove && maxmove>setup.retriangulation_criteria.ttol*h
             triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
@@ -118,8 +119,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, ::Type{VertType}=Geome
             bars[i] = barvec
             L[i] = sqrt(sum(barvec.^2)) # length
             L0[i] = fh((b1+b2)./2)
-            Lsum = Lsum + L[i].^dim
-            L0sum = L0sum + L0[i].^dim
+            Lsum = Lsum + L[i].^3
+            L0sum = L0sum + L0[i].^3
         end
 
         # zero out force at each node
