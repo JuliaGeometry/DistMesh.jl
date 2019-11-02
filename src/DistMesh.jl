@@ -12,12 +12,34 @@ _DEFAULT_SAMPLES = (24,24,24)
 const tetpairs = ((1,2),(1,3),(1,4),(2,3),(2,4),(3,4))
 const tettriangles = ((1,2,3),(1,2,4),(2,3,4),(1,3,4))
 
-struct DistMeshSetup{T}
+
+"""
+    DistMeshSetup
+
+    iso (default: 0): Value of which to extract the iso surface, inside negative
+    deltat (default: 0.1): the fraction of edge displacement to apply each iteration
+"""
+struct DistMeshSetup{T,RT}
     iso::T
     deltat::T
-    ttol::T
+    retriangulation_criteria::RT
     ptol::T
 end
+
+abstract type AbstractRetriangulationCriteria end
+
+struct RetriangulateMaxMove{T} <: AbstractRetriangulationCriteria
+    ttol::T
+end
+
+"""
+    retriangulate on a positive delta over N moves, after M iterations
+"""
+struct RetriangulateMaxMoveDelta <: AbstractRetriangulationCriteria
+    move_count::Int
+    iterations::Int
+end
+
 
 """
     DistMeshStatistics
