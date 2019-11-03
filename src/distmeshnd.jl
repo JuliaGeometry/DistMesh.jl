@@ -49,6 +49,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
 
     # initialize arrays
     max_elt = typemax(eltype(VertType))
+    pair_set = Set{Tuple{Int32,Int32}}() # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[] # edge indices (Int32 since we use Tetgen)
     dp = fill(zero(VertType), length(p)) # force at each node
     bars = VertType[] # the vector of each edge
@@ -87,21 +88,24 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             end
 
             # 4. Describe each edge by a unique pair of nodes
-            resize!(pair, length(t)*6)
-
+            empty!(pair_set)
             for i in eachindex(t)
                 for ep in 1:6
                     p1 = t[i][tetpairs[ep][1]]
                     p2 = t[i][tetpairs[ep][2]]
-                    if p1 > p2
-                        pair[(i-1)*6+ep] = (p2,p1)
-                    else
-                        pair[(i-1)*6+ep] = (p1,p2)
-                    end
+                    push!(pair_set, p1 > p2 ? (p2,p1) : (p1,p2))
                 end
             end
+            resize!(pair, length(pair_set))
+            # copy pair set to array since sets are not sortable
+            i = 1
+            for elt in pair_set
+                pair[i] = elt
+                i = i + 1
+            end
+
+            # sort the edge pairs for better point lookup
             sort!(pair)
-            unique!(pair)
             # resize arrays for new pair counts
             resize!(bars, length(pair))
             resize!(L, length(pair))
