@@ -13,7 +13,7 @@ using StaticArrays
 
     p,t,_ = distmesh(d,huniform,0.2, distribution=:packed)
     @test length(p) == 742
-    @test length(t) == 3455
+    @test length(t) == 3472
 end
 
 
