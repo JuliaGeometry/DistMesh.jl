@@ -74,6 +74,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
             copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
+            sort!(t) # sort tetrahedra so points are closer in mem
 
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
