@@ -60,6 +60,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
 
     # array for tracking quality metrics
     tris = NTuple{3,Int32}[] # array to store triangles used for quality checks
+    triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
     qualities = eltype(VertType)[]
     #maxmoves = eltype(VertType)[]
 
@@ -193,7 +194,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
         if stats
             push!(statsdata.maxmove,maxmove)
             push!(statsdata.maxdp,maxdp)
-            triangle_qualities!(tris,qualities,p,t)
+            triangle_qualities!(tris,triset,qualities,p,t)
             sort!(qualities) # sort for median calc and robust summation
             push!(statsdata.average_qual, sum(qualities)/length(qualities))
             push!(statsdata.median_qual, qualities[round(Int,length(qualities)/2)])

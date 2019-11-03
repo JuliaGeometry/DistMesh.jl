@@ -20,12 +20,16 @@ function triangle_qualities(p,tets)
     triangle_qualities!(tris,qualities,p,tets)
 end
 
-function triangle_qualities!(tris,qualities,p,tets)
-    tets_to_tris!(tris, tets)
+function triangle_qualities!(tris,triset,qualities,p,tets)
+    tets_to_tris!(tris,triset,tets)
     resize!(qualities, length(tris))
     for i in eachindex(tris)
         tp = tris[i]
         qualities[i] = triqual(p[tp[1]], p[tp[2]], p[tp[3]])
     end
     qualities
+end
+
+function triangle_qualities!(tris::Vector,qualities::Vector,p,tets)
+    triangle_qualities!(tris,Set{eltype(tris)}(),qualities,p,tets)
 end
