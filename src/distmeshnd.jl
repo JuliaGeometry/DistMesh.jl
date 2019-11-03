@@ -79,7 +79,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
-            if setup.droptets
+            if setup.droptets # TODO this branch seem to be problematic
                 filter!(t) do i
                     pm = sum(getindex(p,i))/4
                     fdist(pm) <= -geps

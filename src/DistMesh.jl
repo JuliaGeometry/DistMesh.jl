@@ -87,7 +87,7 @@ include("decompositions.jl")
 #include("trisurfupd.jl")
 
 #export distmeshsurface
-export distmesh
+export distmesh, DistMeshSetup, DistMeshStatistics
 
 export huniform
 
