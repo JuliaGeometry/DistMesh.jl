@@ -81,10 +81,13 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
             if setup.droptets # TODO this branch seem to be problematic
-                filter!(t) do i
-                    pm = sum(getindex(p,i))/4
-                    fdist(pm) <= -geps
+                j = firstindex(t)
+                for ai in t
+                    t[j] = ai
+                    pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
+                    j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
                 end
+                j <= lastindex(t) && resize!(t, j-1)
             end
 
             # 4. Describe each edge by a unique pair of nodes
