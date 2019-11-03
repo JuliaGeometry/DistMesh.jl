@@ -46,11 +46,9 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
         # face-centered cubic point distribution
         facecenteredcubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     end
-    dcount = 0
     lcount = 0
 
     # initialize arrays
-    max_elt = typemax(eltype(VertType))
     pair_set = Set{Tuple{Int32,Int32}}() # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[] # edge indices (Int32 since we use Tetgen)
     dp = fill(zero(VertType), length(p)) # force at each node
@@ -82,7 +80,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
-            if setup.droptets # TODO this branch seem to be problematic
+            if setup.droptets
                 j = firstindex(t)
                 for ai in t
                     t[j] = ai
