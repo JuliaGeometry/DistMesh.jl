@@ -73,9 +73,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
-            for i in eachindex(t_d)
-                t[i] = t_d[i]
-            end
+            copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
+
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
