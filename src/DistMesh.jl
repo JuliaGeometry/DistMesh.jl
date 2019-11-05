@@ -88,7 +88,7 @@ include("decompositions.jl")
 
 #export distmeshsurface
 export distmesh, DistMeshSetup, DistMeshStatistics
-
+export RetriangulateMaxMove
 export huniform
 
 end # module
