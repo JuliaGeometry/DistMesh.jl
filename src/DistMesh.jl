@@ -22,7 +22,7 @@ const tettriangles = ((1,2,3),(1,2,4),(2,3,4),(1,3,4))
 struct DistMeshSetup{T,RT}
     iso::T
     deltat::T
-    retriangulation_criteria::RT
+    retriangulation::RT
     ptol::T
     droptets::Bool # drop tetrahedra with centroids outside of the boundary
 end
@@ -30,14 +30,14 @@ end
 function DistMeshSetup(;iso=0,
                         ptol=.001,
                         deltat=0.05,
-                        retriangulation_criteria=RetriangulateMaxMove(0.02),
+                        retriangulation=RetriangulateMaxMove(0.02),
                         droptets=true)
     T = promote_type(typeof(iso),typeof(ptol),typeof(deltat))
-    DistMeshSetup{T,typeof(retriangulation_criteria)}(iso,
-                                                      deltat,
-                                                      retriangulation_criteria,
-                                                      ptol,
-                                                      droptets)
+    DistMeshSetup{T,typeof(retriangulation)}(iso,
+                                             deltat,
+                                             retriangulation,
+                                             ptol,
+                                             droptets)
 end
 
 abstract type AbstractRetriangulationCriteria end
@@ -57,6 +57,7 @@ struct RetriangulateMaxMoveDelta <: AbstractRetriangulationCriteria
     iterations::Int
 end
 
+RetriangulateMaxMoveDelta() = RetriangulateMaxMoveDelta(6,2)
 
 """
     DistMeshStatistics
@@ -88,7 +89,7 @@ include("decompositions.jl")
 
 #export distmeshsurface
 export distmesh, DistMeshSetup, DistMeshStatistics
-export RetriangulateMaxMove
+export RetriangulateMaxMove, RetriangulateMaxMoveDelta
 export huniform
 
 end # module

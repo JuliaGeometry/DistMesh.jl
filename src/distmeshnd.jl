@@ -62,21 +62,28 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
     tris = NTuple{3,Int32}[] # array to store triangles used for quality checks
     triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
     qualities = eltype(VertType)[]
-    #maxmoves = eltype(VertType)[]
+    maxmoves = eltype(VertType)[]
 
     # information on each iteration
     statsdata = DistMeshStatistics()
+    last_retri = 0 # iterations since last retriangulation
 
     @inbounds while true
         # Retriangulation by Delaunay
-
+        if ReTri <: RetriangulateMaxMoveDelta
+            if length(maxmoves) == setup.retriangulation.move_count
+                popfirst!(maxmoves)
+            end
+            push!(maxmoves, maxmove)
+        end
         # if large move, retriangulation
-        if ReTri <: RetriangulateMaxMove && maxmove>setup.retriangulation_criteria.ttol*h
+        if ReTri <: RetriangulateMaxMove && maxmove>setup.retriangulation.ttol*h ||
+            ReTri <: RetriangulateMaxMoveDelta && last_retri > setup.retriangulation.iterations && maxmove > sum(maxmoves)/length(maxmoves) ||
+                lcount == 0
             triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
             copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
-            sort!(t) # sort tetrahedra so points are closer in mem
 
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
@@ -115,8 +122,12 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             resize!(L, length(pair))
             resize!(L0, length(pair))
 
+            empty!(maxmoves)
+            last_retri = 0
             stats && push!(statsdata.retriangulations, lcount)
         end
+
+        last_retri = last_retri + 1
 
         # 6. Move mesh points based on edge lengths L and forces F
         Lsum = zero(eltype(L))
