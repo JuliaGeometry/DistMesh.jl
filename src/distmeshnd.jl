@@ -15,11 +15,10 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T,ReTri}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
+function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
-                                                                       stats=false,
-                                                                       distribution=:regular) where {VertType, T, ReTri}
+                                                                       stats=false) where {VertType, T}
 
     ptol=setup.ptol
     L0mult=1+.4/2^2
@@ -40,9 +39,9 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
     # 'fix' points that do not move
     p = copy(fix)
 
-    if distribution == :regular
+    if setup.initial_points === :regular
         simplecubic!(fdist, p, h, setup.iso, origin, widths, VertType)
-    elseif distribution == :packed
+    elseif setup.intial_points === :packed
         # face-centered cubic point distribution
         facecenteredcubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     end
@@ -70,16 +69,12 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
 
     @inbounds while true
         # Retriangulation by Delaunay
-        if ReTri <: RetriangulateMaxMoveDelta
-            if length(maxmoves) == setup.retriangulation.move_count
-                popfirst!(maxmoves)
-            end
-            push!(maxmoves, maxmove)
+        if length(maxmoves) == setup.maxmove_delta
+            popfirst!(maxmoves)
         end
+        lcount > 0 && push!(maxmoves, maxmove) # just dont include the very first iteration
         # if large move, retriangulation
-        if ReTri <: RetriangulateMaxMove && maxmove>setup.retriangulation.ttol*h ||
-            ReTri <: RetriangulateMaxMoveDelta && last_retri > setup.retriangulation.iterations && maxmove > sum(maxmoves)/length(maxmoves) ||
-                lcount == 0
+        if lcount < 7 && maxmove > setup.ttol*h || last_retri > setup.maxmove_delta_delay && maxmove > sum(maxmoves)/length(maxmoves)
             triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))

@@ -11,7 +11,7 @@ using StaticArrays
     @test length(p) == 485
     @test length(t) == 2207
 
-    p,t,_ = distmesh(d,huniform,0.2, distribution=:packed)
+    p,t,_ = distmesh(d,huniform,0.2, DistMeshSetup(initial_points=:packed))
     @test length(p) == 742
     @test length(t) == 3472
 end

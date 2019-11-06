@@ -19,45 +19,35 @@ const tettriangles = ((1,2,3),(1,2,4),(2,3,4),(1,3,4))
     iso (default: 0): Value of which to extract the iso surface, inside negative
     deltat (default: 0.1): the fraction of edge displacement to apply each iteration
 """
-struct DistMeshSetup{T,RT}
+struct DistMeshSetup{T}
     iso::T
     deltat::T
-    retriangulation::RT
     ptol::T
-    droptets::Bool # drop tetrahedra with centroids outside of the boundary
-end
-
-function DistMeshSetup(;iso=0,
-                        ptol=.001,
-                        deltat=0.05,
-                        retriangulation=RetriangulateMaxMove(0.02),
-                        droptets=true)
-    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat))
-    DistMeshSetup{T,typeof(retriangulation)}(iso,
-                                             deltat,
-                                             retriangulation,
-                                             ptol,
-                                             droptets)
-end
-
-abstract type AbstractRetriangulationCriteria end
-
-"""
-    retriangulate if a move over a given tolerance occurs
-"""
-struct RetriangulateMaxMove{T} <: AbstractRetriangulationCriteria
     ttol::T
+    maxmove_delta::Int
+    maxmove_delta_delay::Int
+    droptets::Bool # drop tetrahedra with centroids outside of the boundary
+    initial_points::Symbol
 end
 
-"""
-    retriangulate on a positive delta over N moves, after M force iterations
-"""
-struct RetriangulateMaxMoveDelta <: AbstractRetriangulationCriteria
-    move_count::Int
-    iterations::Int
+function DistMeshSetup(;iso=0.0,
+                        ptol=.001,
+                        deltat=0.2,
+                        ttol=0.1,
+                        maxmove_delta=6, # number of prior samples to consider
+                        maxmove_delta_delay=2,
+                        droptets=true,
+                        initial_points=:regular)
+    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat))
+    DistMeshSetup{T}(iso,
+                     deltat,
+                     ptol,
+                     ttol,
+                     maxmove_delta,
+                     maxmove_delta_delay,
+                     droptets,
+                     initial_points)
 end
-
-RetriangulateMaxMoveDelta() = RetriangulateMaxMoveDelta(6,2)
 
 """
     DistMeshStatistics
