@@ -72,9 +72,9 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
         if length(maxmoves) == setup.maxmove_delta
             popfirst!(maxmoves)
         end
-        lcount > 0 && push!(maxmoves, maxmove) # just dont include the very first iteration
+        lcount > 0 && push!(maxmoves, maxmove) # dont include the very first iteration
         # if large move, retriangulation
-        if lcount < 7 && maxmove > setup.ttol*h || last_retri > setup.maxmove_delta_delay && maxmove > sum(maxmoves)/length(maxmoves)
+        if lcount < 0 && maxmove > setup.ttol*h || last_retri > setup.maxmove_delta_delay && maxmove > sum(maxmoves)/length(maxmoves)
             triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
