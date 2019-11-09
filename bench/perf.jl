@@ -18,7 +18,7 @@ println("Benchmarking DistMesh.jl...")
 # Algorithms to benchmark
 #
 
-algos = [DistMeshSetup(deltat=0.1),DistMeshSetup()]
+algos = [DistMeshSetup(deltat=0.1, distribution=:packed),DistMeshSetup(distribution=:packed)]
 
 fn_torus(v) = (sqrt(v[1]^2+v[2]^2)-0.5)^2 + v[3]^2 - 0.25 # torus
 fn_sphere(v) = sqrt(sum(v.^2)) -1
@@ -35,8 +35,7 @@ for algo in algos
                                     $algo,
                                     origin = GeometryBasics.Point{3,Float64}(-2),
                                     widths = GeometryBasics.Point{3,Float64}(4),
-                                    stats=false,
-                                    distribution=:packed)
+                                    stats=false)
         suite["Sphere"][string(algo)*" edge="*string(el)] =
             @benchmarkable distmesh(fn_sphere,
                                     huniform,
@@ -44,8 +43,7 @@ for algo in algos
                                     $algo,
                                     origin = GeometryBasics.Point{3,Float64}(-1),
                                     widths = GeometryBasics.Point{3,Float64}(1),
-                                    stats=false,
-                                    distribution=:packed)
+                                    stats=false)
     end
 end
 
