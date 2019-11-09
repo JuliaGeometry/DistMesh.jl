@@ -42,7 +42,7 @@ for algo in algos
                                     $el,
                                     $algo,
                                     origin = GeometryBasics.Point{3,Float64}(-1),
-                                    widths = GeometryBasics.Point{3,Float64}(1),
+                                    widths = GeometryBasics.Point{3,Float64}(2),
                                     stats=false)
     end
 end
