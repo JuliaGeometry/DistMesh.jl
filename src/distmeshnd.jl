@@ -75,7 +75,6 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
             copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
-            sort!(t) # sort tetrahedra so points are closer in mem
 
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
@@ -137,8 +136,11 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             dp[i] = zero(VertType)
         end
 
+        # this is not hoisted correctly in the loop
+        lscbrt = cbrt(Lsum/L0sum)
+
         for i in eachindex(pair)
-            L0_f = L0[i].*L0mult.*cbrt(Lsum/L0sum)
+            L0_f = L0[i].*L0mult.*lscbrt
             # compute force vectors
             F = max(L0_f-L[i],zero(eltype(L0)))
             FBar = bars[i].*F./L[i]
