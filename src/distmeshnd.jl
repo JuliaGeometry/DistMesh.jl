@@ -15,7 +15,7 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T,ReTri}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
+function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup::DistMeshSetup{T,ReTri}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
                                                                        stats=false) where {VertType, T, ReTri}
@@ -114,12 +114,15 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             resize!(L, length(pair))
             resize!(L0, length(pair))
 
+            # if we are doing uniform mesh size we can set L0 to 1
+            isa(fh, HUniform) && fill!(L0, one(eltype(L0)))
+
             stats && push!(statsdata.retriangulations, lcount)
         end
 
         # 6. Move mesh points based on edge lengths L and forces F
         Lsum = zero(eltype(L))
-        L0sum = zero(eltype(L0))
+        L0sum = isa(fh, HUniform) ? length(pair) : zero(eltype(L0))
         for i in eachindex(pair)
             pb = pair[i]
             b1 = p[pb[1]]
@@ -127,9 +130,11 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             barvec = b1 - b2 # bar vector
             bars[i] = barvec
             L[i] = sqrt(sum(barvec.^2)) # length
-            L0[i] = fh((b1+b2)./2)
             Lsum = Lsum + L[i].^3
-            L0sum = L0sum + L0[i].^3
+            if !isa(fh, HUniform)
+                L0[i] = fh((b1+b2)./2)
+                L0sum = L0sum + L0[i].^3
+            end
         end
 
         # zero out force at each node

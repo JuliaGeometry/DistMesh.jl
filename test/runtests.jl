@@ -7,11 +7,11 @@ using StaticArrays
 
 @testset "distmesh 3D" begin
     d(p) = sqrt(sum(p.^2))-1
-    p,t,_ = distmesh(d,huniform,0.2)
+    p,t,_ = distmesh(d,HUniform(),0.2)
     @test length(p) == 485
     @test length(t) == 2207
 
-    p,t,_ = distmesh(d,huniform,0.2, DistMeshSetup(distribution=:packed))
+    p,t,_ = distmesh(d,HUniform(),0.2, DistMeshSetup(distribution=:packed))
     @test length(p) == 742
     @test length(t) == 3472
 end
