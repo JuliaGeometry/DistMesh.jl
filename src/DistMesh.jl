@@ -25,19 +25,22 @@ struct DistMeshSetup{T,RT}
     retriangulation_criteria::RT
     ptol::T
     droptets::Bool # drop tetrahedra with centroids outside of the boundary
+    distribution::Symbol # intial point distribution
 end
 
 function DistMeshSetup(;iso=0,
                         ptol=.001,
                         deltat=0.05,
                         retriangulation_criteria=RetriangulateMaxMove(0.02),
-                        droptets=true)
+                        droptets=true,
+                        distribution=:regular)
     T = promote_type(typeof(iso),typeof(ptol),typeof(deltat))
     DistMeshSetup{T,typeof(retriangulation_criteria)}(iso,
                                                       deltat,
                                                       retriangulation_criteria,
                                                       ptol,
-                                                      droptets)
+                                                      droptets,
+                                                      distribution)
 end
 
 abstract type AbstractRetriangulationCriteria end

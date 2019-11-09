@@ -18,8 +18,7 @@
 function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T,ReTri}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
-                                                                       stats=false,
-                                                                       distribution=:regular) where {VertType, T, ReTri}
+                                                                       stats=false) where {VertType, T, ReTri}
 
     ptol=setup.ptol
     L0mult=1+.4/2^2
@@ -40,9 +39,9 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
     # 'fix' points that do not move
     p = copy(fix)
 
-    if distribution == :regular
+    if setup.distribution === :regular
         simplecubic!(fdist, p, h, setup.iso, origin, widths, VertType)
-    elseif distribution == :packed
+    elseif setup.distribution === :packed
         # face-centered cubic point distribution
         facecenteredcubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     end
