@@ -107,7 +107,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             end
 
             # sort the edge pairs for better point lookup
-            sort!(pair)
+            sort!(pair, alg=TimSort)
             # resize arrays for new pair counts
             resize!(bars, length(pair))
             resize!(L, length(pair))

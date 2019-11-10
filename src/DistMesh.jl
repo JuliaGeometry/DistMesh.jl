@@ -2,6 +2,7 @@ module DistMesh
 
 using Meshing,
       LinearAlgebra,
+      SortingAlgorithms,
       StaticArrays,
       TetGen
 using GeometryBasics
