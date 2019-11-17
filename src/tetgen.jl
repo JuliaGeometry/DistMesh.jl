@@ -8,6 +8,12 @@ function delaunaynsort(points)
     tetio
 end
 
+function delaunaynnosort(points)
+    tetio = tetrahedralize(TetGen.TetgenIO(points), "Qb/1") # Q- Quiet, -b(brio_threshold/brio_ratio/hilbert_limit/hilbert_order)
+    tetio
+end
+
+
 # needs some tweaks, gives garbage results, might need to twek the julia wrapper?
 function reconstruct!(points, tets)
     tetio = tetrahedralize(TetGen.TetgenIO(points,tetrahedrons=tets), "Qr") # Q- Quiet, r- retriangulate
