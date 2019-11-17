@@ -66,15 +66,30 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
     # information on each iteration
     statsdata = DistMeshStatistics()
 
+    # if we don't have fixed points, we can let tetgen sort the points for faster insertion later
+    allow_point_sort = isempty(fix)
+
     @inbounds while true
         # Retriangulation by Delaunay
 
         # if large move, retriangulation
         if ReTri <: RetriangulateMaxMove && maxmove>setup.retriangulation_criteria.ttol*h
-            triangulation = delaunayn(p)
+
+            # perform delaunay tetrahedralization using tetgen.
+            # if we have no fix points we allow tetgen to sort the points
+            # for faster computations
+            triangulation = allow_point_sort ? delaunaynsort(p) : delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
             copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
+
+            # copy the sorted points to our point array
+            if allow_point_sort
+                new_pts = triangulation.points
+                for i in eachindex(new_pts)
+                    p[i] = new_pts[i]
+                end
+            end
 
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
