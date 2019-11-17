@@ -4,7 +4,7 @@ function delaunayn(points)
 end
 
 function delaunaynsort(points)
-    tetio = tetrahedralize(TetGen.TetgenIO(points), "Qb") # Q- Quiet, b- BRIO-hilbert sort
+    tetio = tetrahedralize(TetGen.TetgenIO(points), "Qb1/0.5/0.05/5") # Q- Quiet, -b(brio_threshold/brio_ratio/hilbert_limit/hilbert_order)
     tetio
 end
 

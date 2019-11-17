@@ -78,13 +78,13 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # perform delaunay tetrahedralization using tetgen.
             # if we have no fix points we allow tetgen to sort the points
             # for faster computations
-            triangulation = allow_point_sort ? delaunaynsort(p) : delaunayn(p)
+            triangulation = allow_point_sort && iszero(lcount) ? delaunaynsort(p) : delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
             copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
 
             # copy the sorted points to our point array
-            if allow_point_sort
+            if allow_point_sort && iszero(lcount)
                 new_pts = triangulation.points
                 for i in eachindex(new_pts)
                     p[i] = new_pts[i]
