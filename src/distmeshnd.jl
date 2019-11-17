@@ -90,24 +90,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             end
 
             # 4. Describe each edge by a unique pair of nodes
-            empty!(pair_set)
-            for i in eachindex(t)
-                for ep in 1:6
-                    p1 = t[i][tetpairs[ep][1]]
-                    p2 = t[i][tetpairs[ep][2]]
-                    push!(pair_set, p1 > p2 ? (p2,p1) : (p1,p2))
-                end
-            end
-            resize!(pair, length(pair_set))
-            # copy pair set to array since sets are not sortable
-            i = 1
-            for elt in pair_set
-                pair[i] = elt
-                i = i + 1
-            end
+            tet_to_edges!(pair, pair_set, t)
 
-            # sort the edge pairs for better point lookup
-            sort!(pair)
             # resize arrays for new pair counts
             resize!(bars, length(pair))
             resize!(L, length(pair))
