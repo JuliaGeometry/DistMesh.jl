@@ -39,13 +39,13 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
     # 'fix' points that do not move
     p = copy(fix)
 
+    # add points to p based on the initial distribution
     if setup.distribution === :regular
         simplecubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     elseif setup.distribution === :packed
         # face-centered cubic point distribution
         facecenteredcubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     end
-    lcount = 0
 
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}() # set used for ensure we have a unique set of edges
@@ -65,6 +65,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
 
     # information on each iteration
     statsdata = DistMeshStatistics()
+    lcount = 0 # iteration counter
 
     @inbounds while true
         # Retriangulation by Delaunay
@@ -79,6 +80,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # average points to get mid point of each tetrahedra
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
+            # TODO: this is an inlined filter call. Would be good to revert
             if setup.droptets
                 j = firstindex(t)
                 for ai in t
@@ -121,18 +123,23 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
         end
 
         # this is not hoisted correctly in the loop
+        # so we initialize here
+        # this is the Lp norm (p=3)
         lscbrt = cbrt(Lsum/L0sum)
 
         for i in eachindex(pair)
             L0_f = L0[i].*L0mult.*lscbrt
             # compute force vectors
-            F = max(L0_f-L[i],zero(eltype(L0)))
-            FBar = bars[i].*F./L[i]
-            # add the force vector to the node
-            b1 = pair[i][1]
-            b2 = pair[i][2]
-            dp[b1] = dp[b1] .+ FBar
-            dp[b2] = dp[b2] .- FBar
+            F = L0_f-L[i]
+            # edges are not allowed to pull, only repel
+            if F > zero(eltype(L0))
+                FBar = bars[i].*F./L[i]
+                # add the force vector to the node
+                b1 = pair[i][1]
+                b2 = pair[i][2]
+                dp[b1] = dp[b1] .+ FBar
+                dp[b2] = dp[b2] .- FBar
+            end
         end
 
         # Zero out forces on fix points
@@ -163,10 +170,10 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # bring points back to boundary if outside
             #deps = sqrt(eps(d)) # this is quite an expensive call, we use a constant initialized in the beginning
             # use central difference
-            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))/(2deps)
-            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))/(2deps)
-            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))/(2deps)
-            grad = VertType(dx,dy,dz) #normalize?
+            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))
+            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))
+            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))
+            grad = VertType(dx,dy,dz)./(2deps) #normalize?
             # project back to boundary
             p[i] = p[i] .- grad.*(d+setup.iso)
             maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove)
