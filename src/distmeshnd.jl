@@ -156,7 +156,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             p0 = p[i] # store original point location
             p[i] = p[i].+deltat.*dp[i] # apply displacements to points
 
-            d = fdist(p[i])
+            d = fdist(p[i]) # TODO: it should be possible to cache this result and avoid recomputation for most internal values if they are sufficiently far inside the boundary
 
             if d < -geps
                 maxdp = max(maxdp, deltat*sqrt(sum(dp[i].^2)))
