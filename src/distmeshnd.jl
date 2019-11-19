@@ -161,8 +161,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # check if we are verifiably within the bounds and use this value
             # to avoid recomputing fdist
             move = sqrt(sum((p[i]-p0).^2))
-            cached_d = pt_dists[i]
-            d_est = cached_d + move # apply the movement to our cache point
+            d_est = pt_dists[i] + move # apply the movement to our cache point
             d = d_est < -geps ? d_est : fdist(p[i])
             pt_dists[i] = d # store the correct or approximate distance from the function
 
@@ -184,9 +183,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             grad = VertType(dx,dy,dz)./(2deps) #normalize?
             # project back to boundary
             p[i] = p[i] .- grad.*(d+setup.iso)
-            # these calls can be merged higher up in the loop
-            maxmove = max(move-d,maxmove)
-            pt_dists[i] = setup.iso
+            maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
+            pt_dists[i] = setup.iso # ideally
         end
 
         # increment iteration counter
