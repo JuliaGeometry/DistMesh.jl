@@ -30,7 +30,7 @@ for algo in algos
     for el in (0.15,0.2)
         suite["Torus"][string(algo)*" edge="*string(el)] =
             @benchmarkable distmesh(fn_torus,
-                                    huniform,
+                                    HUniform(),
                                     $el,
                                     $algo,
                                     origin = GeometryBasics.Point{3,Float64}(-2),
@@ -38,7 +38,7 @@ for algo in algos
                                     stats=false)
         suite["Sphere"][string(algo)*" edge="*string(el)] =
             @benchmarkable distmesh(fn_sphere,
-                                    huniform,
+                                    HUniform(),
                                     $el,
                                     $algo,
                                     origin = GeometryBasics.Point{3,Float64}(-1),

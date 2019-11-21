@@ -55,11 +55,14 @@ end
 
 DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[])
 
+"""
+Uniform edge length function.
+"""
+struct HUniform end
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
 include("pointdistribution.jl")
-include("huniform.jl")
 include("mkt2t.jl")
 include("distmeshnd.jl")
 include("compat/munique.jl")
@@ -69,8 +72,6 @@ include("decompositions.jl")
 #include("trisurfupd.jl")
 
 #export distmeshsurface
-export distmesh, DistMeshSetup, DistMeshStatistics
-export RetriangulateMaxMove
-export huniform
+export distmesh, DistMeshSetup, DistMeshStatistics, HUniform
 
 end # module

@@ -15,16 +15,18 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64};
+function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup::DistMeshSetup{T}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64};
                                                                        origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
-                                                                       stats=false) where {VertType, T, ReTri}
+                                                                       stats=false) where {VertType, T}
 
     ptol=setup.ptol
     L0mult=1+.4/2^2
     deltat=setup.deltat
     geps=1e-1*h+setup.iso
+
+    non_uniform = isa(fh, Function) # so we can elide fh calls
 
     deps = sqrt(eps(T)) # epsilon for computing central difference
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
@@ -56,7 +58,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
     dp = fill(zero(VertType), length(p)) # force at each node
     bars = VertType[] # the vector of each edge
     L = eltype(VertType)[] # vector length of each edge
-    L0 = eltype(VertType)[] # desired edge length computed by dh (edge length function)
+    non_uniform && (L0 = eltype(VertType)[]) # desired edge length computed by dh (edge length function)
     t = GeometryBasics.SimplexFace{4,Int32}[] # tetrahedra indices from delaunay triangulation
     maxmove = typemax(eltype(VertType)) # stores an iteration max movement for retriangulation
 
@@ -100,14 +102,14 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # resize arrays for new pair counts
             resize!(bars, length(pair))
             resize!(L, length(pair))
-            resize!(L0, length(pair))
+            non_uniform && resize!(L0, length(pair))
 
             stats && push!(statsdata.retriangulations, lcount)
         end
 
         # 6. Move mesh points based on edge lengths L and forces F
         Lsum = zero(eltype(L))
-        L0sum = zero(eltype(L0))
+        L0sum = non_uniform ? zero(eltype(L0)) : length(pair)
         for i in eachindex(pair)
             pb = pair[i]
             b1 = p[pb[1]]
@@ -115,9 +117,9 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             barvec = b1 - b2 # bar vector
             bars[i] = barvec
             L[i] = sqrt(sum(barvec.^2)) # length
-            L0[i] = fh((b1+b2)./2)
+            non_uniform && (L0[i] = fh((b1+b2)./2))
             Lsum = Lsum + L[i].^3
-            L0sum = L0sum + L0[i].^3
+            non_uniform && (L0sum = L0sum + L0[i].^3)
         end
 
         # zero out force at each node
@@ -128,14 +130,14 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
         # this is not hoisted correctly in the loop
         # so we initialize here
         # this is the Lp norm (p=3)
-        lscbrt = cbrt(Lsum/L0sum)
+        lscbrt = L0mult.*cbrt(Lsum/L0sum)
 
         for i in eachindex(pair)
-            L0_f = L0[i].*L0mult.*lscbrt
+            L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
             # compute force vectors
             F = L0_f-L[i]
             # edges are not allowed to pull, only repel
-            if F > zero(eltype(L0))
+            if F > zero(eltype(L))
                 FBar = bars[i].*F./L[i]
                 # add the force vector to the node
                 b1 = pair[i][1]
