@@ -83,6 +83,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
             # TODO: this is an inlined filter call. Would be good to revert
+            # TODO: can we use the point distance array to pass boundary points to
+            #        tetgen so this call is no longer required?
             if setup.droptets
                 j = firstindex(t)
                 for ai in t
