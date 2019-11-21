@@ -19,47 +19,26 @@ const tettriangles = ((1,2,3),(1,2,4),(2,3,4),(1,3,4))
     iso (default: 0): Value of which to extract the iso surface, inside negative
     deltat (default: 0.1): the fraction of edge displacement to apply each iteration
 """
-struct DistMeshSetup{T,RT}
+struct DistMeshSetup{T}
     iso::T
     deltat::T
-    retriangulation_criteria::RT
+    ttol::T
     ptol::T
-    droptets::Bool # drop tetrahedra with centroids outside of the boundary
     distribution::Symbol # intial point distribution
 end
 
 function DistMeshSetup(;iso=0,
                         ptol=.001,
                         deltat=0.05,
-                        retriangulation_criteria=RetriangulateMaxMove(0.02),
-                        droptets=true,
+                        ttol=0.02,
                         distribution=:regular)
-    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat))
-    DistMeshSetup{T,typeof(retriangulation_criteria)}(iso,
-                                                      deltat,
-                                                      retriangulation_criteria,
-                                                      ptol,
-                                                      droptets,
-                                                      distribution)
+    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat), typeof(ttol))
+    DistMeshSetup{T}(iso,
+                     deltat,
+                     ttol,
+                     ptol,
+                     distribution)
 end
-
-abstract type AbstractRetriangulationCriteria end
-
-"""
-    retriangulate if a move over a given tolerance occurs
-"""
-struct RetriangulateMaxMove{T} <: AbstractRetriangulationCriteria
-    ttol::T
-end
-
-"""
-    retriangulate on a positive delta over N moves, after M force iterations
-"""
-struct RetriangulateMaxMoveDelta <: AbstractRetriangulationCriteria
-    move_count::Int
-    iterations::Int
-end
-
 
 """
     DistMeshStatistics

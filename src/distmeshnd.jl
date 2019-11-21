@@ -15,7 +15,8 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T,ReTri}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64}; origin=VertType(-1,-1,-1),
+function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64};
+                                                                       origin=VertType(-1,-1,-1),
                                                                        widths=VertType(2,2,2),
                                                                        fix::Vector{VertType}=VertType[],
                                                                        stats=false) where {VertType, T, ReTri}
@@ -73,7 +74,7 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
         # Retriangulation by Delaunay
 
         # if large move, retriangulation
-        if ReTri <: RetriangulateMaxMove && maxmove>setup.retriangulation_criteria.ttol*h
+        if maxmove>setup.ttol*h
             triangulation = delaunayn(p)
             t_d = triangulation.tetrahedra
             resize!(t, length(t_d))
@@ -85,15 +86,13 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # TODO: this is an inlined filter call. Would be good to revert
             # TODO: can we use the point distance array to pass boundary points to
             #        tetgen so this call is no longer required?
-            if setup.droptets
-                j = firstindex(t)
-                for ai in t
-                    t[j] = ai
-                    pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
-                    j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
-                end
-                j <= lastindex(t) && resize!(t, j-1)
+            j = firstindex(t)
+            for ai in t
+                t[j] = ai
+                pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
+                j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
             end
+            j <= lastindex(t) && resize!(t, j-1)
 
             # 4. Describe each edge by a unique pair of nodes
             tet_to_edges!(pair, pair_set, t)
