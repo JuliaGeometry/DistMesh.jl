@@ -47,6 +47,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
         facecenteredcubic!(fdist, p, h, setup.iso, origin, widths, VertType)
     end
 
+    pt_dists = map(fdist, p) # cache to store point locations so we can minimize fdist calls
+
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}() # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[] # edge indices (Int32 since we use Tetgen)
@@ -81,6 +83,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             # if the mid point of the tetrahedra is outside of
             # the boundary we remove it.
             # TODO: this is an inlined filter call. Would be good to revert
+            # TODO: can we use the point distance array to pass boundary points to
+            #        tetgen so this call is no longer required?
             if setup.droptets
                 j = firstindex(t)
                 for ai in t
@@ -156,14 +160,19 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             p0 = p[i] # store original point location
             p[i] = p[i].+deltat.*dp[i] # apply displacements to points
 
-            d = fdist(p[i]) # TODO: it should be possible to cache this result and avoid recomputation for most internal values if they are sufficiently far inside the boundary
+            # check if we are verifiably within the bounds and use this value
+            # to avoid recomputing fdist
+            move = sqrt(sum((p[i]-p0).^2))
+            d_est = pt_dists[i] + move # apply the movement to our cache point
+            d = d_est < -geps ? d_est : fdist(p[i])
+            pt_dists[i] = d # store the correct or approximate distance from the function
 
             if d < -geps
                 maxdp = max(maxdp, deltat*sqrt(sum(dp[i].^2)))
             end
 
             if d <= setup.iso
-                maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove) # determine movements
+                maxmove = max(move,maxmove) # determine movements
                 continue
             end
 
@@ -176,7 +185,8 @@ function distmesh(fdist::Function,fh::Function,h::Number, setup::DistMeshSetup{T
             grad = VertType(dx,dy,dz)./(2deps) #normalize?
             # project back to boundary
             p[i] = p[i] .- grad.*(d+setup.iso)
-            maxmove = max(sqrt(sum((p[i]-p0).^2)),maxmove)
+            maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
+            pt_dists[i] = setup.iso # ideally
         end
 
         # increment iteration counter
