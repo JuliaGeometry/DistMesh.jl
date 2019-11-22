@@ -15,17 +15,43 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup::DistMeshSetup{T}=DistMeshSetup(), ::Type{VertType}=GeometryBasics.Point{3,Float64};
-                                                                       origin=VertType(-1,-1,-1),
-                                                                       widths=VertType(2,2,2),
-                                                                       fix::Vector{VertType}=VertType[],
-                                                                       stats=false) where {VertType, T}
+function distmesh(fdist::Function,
+                  fh::Union{Function,HUniform},
+                  h::Number,
+                  setup::DistMeshSetup=DistMeshSetup();
+                  origin=GeometryBasics.Point{3,Float64}(-1,-1,-1),
+                  widths=GeometryBasics.Point{3,Float64}(2,2,2),
+                  fix=nothing,
+                  stats=false) where {VertType}
+    if isa(fix, Nothing)
+        VT = promote_type(typeof(origin), typeof(widths))
+        fp = nothing
+    else
+        VT = promote_type(typeof(origin), typeof(widths), eltype(fix))
+        fp = convert(Vector{VT}, fix)
+    end
+    o = VT(origin...)
+    w = VT(widths...)
+    distmesh(fdist, fh, h, setup, o, w, fp, Val(stats), VT)
+end
+
+function distmesh(fdist::Function,
+                  fh,
+                  h::Number,
+                  setup::DistMeshSetup,
+                  origin,
+                  widths,
+                  fix,
+                  ::Val{stats},
+                  ::Type{VertType}) where {VertType, stats}
 
     geps=1e-1*h+setup.iso
 
+    # static parameter info
     non_uniform = isa(fh, Function) # so we can elide fh calls
+    have_fixed = !isa(fix, Nothing)
 
-    deps = sqrt(eps(T)) # epsilon for computing central difference
+    deps = sqrt(eps(eltype(VertType))) # epsilon for computing central difference
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
     # # % 2. Remove points outside the region, apply the rejection method
@@ -37,7 +63,11 @@ function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup:
     # initialize Vertex Arrays
     # the first N points in the array correspond to
     # 'fix' points that do not move
-    p = copy(fix)
+    if have_fixed
+        p = copy(fix)
+    else
+        p = VertType[]
+    end
 
     # add points to p based on the initial distribution
     if setup.distribution === :regular
@@ -145,8 +175,10 @@ function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup:
         end
 
         # Zero out forces on fix points
-        for i in eachindex(fix)
-            dp[i] = zero(VertType)
+        if have_fixed
+            for i in eachindex(fix)
+                dp[i] = zero(VertType)
+            end
         end
 
         # apply point forces and
