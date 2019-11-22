@@ -208,13 +208,8 @@ function distmesh(fdist::Function,
 
             # bring points back to boundary if outside
             #deps = sqrt(eps(d)) # this is quite an expensive call, we use a constant initialized in the beginning
-            # use central difference
-            dx = (fdist(p[i].+VertType(deps,0,0)) - fdist(p[i].-VertType(deps,0,0)))
-            dy = (fdist(p[i].+VertType(0,deps,0)) - fdist(p[i].-VertType(0,deps,0)))
-            dz = (fdist(p[i].+VertType(0,0,deps)) - fdist(p[i].-VertType(0,0,deps)))
-            grad = VertType(dx,dy,dz)./(2deps) #normalize?
-            # project back to boundary
-            p[i] = p[i] .- grad.*(d+setup.iso)
+            # use central difference and project back to boundary
+            p[i] = p[i] .- centraldiff(fdist,p[i]).*(d+setup.iso)
             maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
             pt_dists[i] = setup.iso # ideally
         end

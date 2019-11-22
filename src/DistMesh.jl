@@ -62,6 +62,7 @@ struct HUniform end
 
 #include("circumcenter.jl")
 #include("distmeshsurface.jl")
+include("diff.jl")
 include("pointdistribution.jl")
 include("mkt2t.jl")
 include("distmeshnd.jl")
