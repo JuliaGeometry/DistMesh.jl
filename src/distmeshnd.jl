@@ -21,9 +21,6 @@ function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup:
                                                                        fix::Vector{VertType}=VertType[],
                                                                        stats=false) where {VertType, T}
 
-    ptol=setup.ptol
-    L0mult=1+.4/2^2
-    deltat=setup.deltat
     geps=1e-1*h+setup.iso
 
     non_uniform = isa(fh, Function) # so we can elide fh calls
@@ -130,7 +127,7 @@ function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup:
         # this is not hoisted correctly in the loop
         # so we initialize here
         # this is the Lp norm (p=3)
-        lscbrt = L0mult.*cbrt(Lsum/L0sum)
+        lscbrt = (1+(0.4/2^2))*cbrt(Lsum/L0sum)
 
         for i in eachindex(pair)
             L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
@@ -159,7 +156,7 @@ function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup:
         for i in eachindex(p)
 
             p0 = p[i] # store original point location
-            p[i] = p[i].+deltat.*dp[i] # apply displacements to points
+            p[i] = p[i].+setup.deltat.*dp[i] # apply displacements to points
 
             # check if we are verifiably within the bounds and use this value
             # to avoid recomputing fdist
@@ -169,7 +166,7 @@ function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup:
             pt_dists[i] = d # store the correct or approximate distance from the function
 
             if d < -geps
-                maxdp = max(maxdp, deltat*sqrt(sum(dp[i].^2)))
+                maxdp = max(maxdp, setup.deltat*sqrt(sum(dp[i].^2)))
             end
 
             if d <= setup.iso
@@ -204,7 +201,7 @@ function distmesh(fdist::Function,fh::Union{Function,HUniform},h::Number, setup:
         end
 
         # 8. Termination criterion
-        if maxdp<ptol*h
+        if maxdp<setup.ptol*h
             return p, t, statsdata
         end
     end
