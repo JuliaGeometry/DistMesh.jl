@@ -8,9 +8,9 @@ function triqual(p1, p2, p3)
     d13 = p3 - p1
     d23 = p3 - p2
     n   = cross(d12,d13)
-    vol = sqrt(sum(n.^2))/2
+    vol = sqrt(sum(n.^2))
     den = dot(d12,d12) + dot(d13,d13) + dot(d23,d23)
-    return sqrt(3)*4*vol/den
+    return sqrt(3)*2*vol/den
 end
 
 function triangle_qualities(p,tets)
@@ -32,4 +32,12 @@ end
 
 function triangle_qualities!(tris::Vector,qualities::Vector,p,tets)
     triangle_qualities!(tris,Set{eltype(tris)}(),qualities,p,tets)
+end
+
+function triangle_qualities!(tris::Vector{Tup},qualities::Vector{Num},p::Vector) where {Tup<:NTuple, Num<:Number}
+    for i in eachindex(tris)
+        tp = tris[i]
+        qualities[i] = triqual(p[tp[1]], p[tp[2]], p[tp[3]])
+    end
+    qualities
 end

@@ -104,7 +104,11 @@ function distmesh(fdist::Function,
             resize!(L, length(pair))
             non_uniform && resize!(L0, length(pair))
 
-            stats && push!(statsdata.retriangulations, lcount)
+            if stats
+                push!(statsdata.retriangulations, lcount)
+                tets_to_tris!(tris, triset, t)
+                resize!(qualities, length(tris))
+            end
         end
 
         # compute edge lengths (L) and adaptive edge lengths (L0)
@@ -194,7 +198,7 @@ function distmesh(fdist::Function,
         if stats
             push!(statsdata.maxmove,maxmove)
             push!(statsdata.maxdp,maxdp)
-            triangle_qualities!(tris,triset,qualities,p,t)
+            triangle_qualities!(tris,qualities,p)
             med = median!(qualities)
             mine, maxe = extrema(qualities)
             push!(statsdata.average_qual, sum(qualities)/length(qualities))
@@ -264,10 +268,15 @@ function distmesh(fdist::Function,
     statsdata = DistMeshStatistics()
     lcount = 0 # iteration counter
 
+    # quality tracking measures
+    prev_mean_qual = typemax(eltype(VertType))
+    mean_qual = 0
+
     @inbounds while true
         # if large move, retriangulation
-        if maxmove>setup.ttol*h
+        if mean_qual < prev_mean_qual
 
+            # TODO: Want to test if reverting to previous point locations improves convergence
             delaunayn!(fdist, p, t, geps) # compute a new delaunay triangulation
 
             tet_to_edges!(pair, pair_set, t) # Describe each edge by a unique pair of nodes
@@ -355,7 +364,8 @@ function distmesh(fdist::Function,
         lcount = lcount + 1
 
         # compute triangle qualities
-        triangle_qualities!(tris,triset,qualities,p,t)
+        triangle_qualities!(tris,qualities,p)
+        prev_mean_qual = mean_qual
 
         # save iteration stats
         if stats
