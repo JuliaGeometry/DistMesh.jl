@@ -50,10 +50,12 @@ struct DistMeshStatistics{T}
     maxdp::Vector{T} # max displacmeent induced by an edge
     average_qual::Vector{T}
     median_qual::Vector{T}
+    minimum_qual::Vector{T}
+    maximum_qual::Vector{T}
     retriangulations::Vector{Int} # Iteration num where retriangulation occured
 end
 
-DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[])
+DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[],[],[])
 
 """
 Uniform edge length function.
