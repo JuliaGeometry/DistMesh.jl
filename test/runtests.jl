@@ -1,8 +1,6 @@
 using DistMesh
 using Test
-using MAT
-using GeometryTypes
-using StaticArrays
+using GeometryBasics
 
 include("vals.jl")
 
@@ -28,26 +26,6 @@ include("vals.jl")
         @test isapprox(getproperty(s,fn), getproperty(stat_04,fn))
     end
 end
-
-
-# translation utils
-@testset "munique" begin
-    a = [1 2; 3 4; 5 6; 1 2; 3 4; 8 8]
-    @test DistMesh.munique(a) == [1,2,3,1,2,4]
-end
-
-# distmesh utils
-@testset "mkt2t" begin
-    # load up matlab workspace for comparison
-    # based on sphere case
-    vars = matread((@__DIR__)*"/mats/mkt2t.mat")
-    test_t2t, test_t2n = DistMesh.mkt2t(vars["t"])
-    @test test_t2n == vars["t2n"]
-    @test test_t2t == vars["t2t"]
-
-    # close?
-end
-
 
 @testset "point distributions" begin
     vlen(a,b) = sqrt(sum((a-b).^2))
@@ -93,10 +71,3 @@ end
         @test tris == [(1, 2, 3), (1, 2, 4), (1, 3, 4), (2, 3, 4), (2, 3, 5), (2, 4, 5), (3, 4, 5)]
     end
 end
-
-# @testset "distmeshsurface" begin
-#     fd(p) = dsphere(p,0,0,0,1);
-#     fh(p) = 0.05+0.5*dsphere(p,0,0,1,0);
-#     p,t = distmeshsurface(fd, fh, 0.15, 1.1.*[-1 -1 -1;1 1 1]);
-#     @show p, t
-# end
