@@ -40,20 +40,24 @@ end
     vlen(a,b) = sqrt(sum((a-b).^2))
     @testset "simple cubic" begin
         pts = []
+        dists = []
         f(x) = -1
-        DistMesh.simplecubic!(f, pts, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
+        DistMesh.simplecubic!(f, pts, dists, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
         @test length(pts) == 27
+        @test length(dists) == 27
         @test isapprox(vlen(pts[1],pts[2]),0.5)
         @test length(pts) == length(unique(pts))
     end
 
     @testset "face centered cubic" begin
-    pts = []
-    f(x) = -1
-    DistMesh.facecenteredcubic!(f, pts, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
-    @test length(pts) == 216
-    @test isapprox(vlen(pts[1],pts[2]),0.5)
-    @test length(pts) == length(unique(pts))
+        pts = []
+        dists = []
+        f(x) = -1
+        DistMesh.facecenteredcubic!(f, pts, dists, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
+        @test length(pts) == 216
+        @test length(dists) == 216
+        @test isapprox(vlen(pts[1],pts[2]),0.5)
+        @test length(pts) == length(unique(pts))
     end
 
 end

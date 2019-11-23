@@ -62,20 +62,20 @@ function distmesh(fdist::Function,
         p = VertType[]
     end
 
+    pt_dists = map(fdist, p) # cache to store point locations so we can minimize fdist calls
+
     # add points to p based on the initial distribution
     if setup.distribution === :regular
-        simplecubic!(fdist, p, h, setup.iso, origin, widths, VertType)
+        simplecubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
     elseif setup.distribution === :packed
         # face-centered cubic point distribution
-        facecenteredcubic!(fdist, p, h, setup.iso, origin, widths, VertType)
+        facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
     end
-
-    pt_dists = map(fdist, p) # cache to store point locations so we can minimize fdist calls
 
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[]                 # edge indices (Int32 since we use Tetgen)
-    dp = fill(zero(VertType), length(p))        # force at each node
+    dp = zeros(VertType, length(p))             # displacement at each node
     bars = VertType[]                           # the vector of each edge
     L = eltype(VertType)[]                      # vector length of each edge
     non_uniform && (L0 = eltype(VertType)[])    # desired edge length computed by dh (edge length function)
