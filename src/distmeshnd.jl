@@ -254,7 +254,6 @@ function distmesh(fdist::Function,
     L = eltype(VertType)[]                      # vector length of each edge
     non_uniform && (L0 = eltype(VertType)[])    # desired edge length computed by dh (edge length function)
     t = GeometryBasics.SimplexFace{4,Int32}[]   # tetrahedra indices from delaunay triangulation
-    maxmove = typemax(eltype(VertType))         # stores an iteration max movement for retriangulation
 
     # arrays for tracking quality metrics
     tris = NTuple{3,Int32}[]        # triangles used for quality checks
@@ -331,8 +330,6 @@ function distmesh(fdist::Function,
 
         # apply point forces and
         # bring outside points back to the boundary
-        maxdp = typemin(eltype(VertType))
-        maxmove = typemin(eltype(VertType))
         for i in eachindex(p)
 
             p0 = p[i] # store original point location
@@ -346,29 +343,24 @@ function distmesh(fdist::Function,
             d = d_est < -geps ? d_est : fdist(p[i]) # determine if we need correct or approximate distance
             pt_dists[i] = d                         # store distance
 
-            if d < -geps
-                maxdp = max(maxdp, setup.deltat*sqrt(sum(dp[i].^2)))
+            if d > setup.iso
+                # bring points back to boundary if outside using central difference
+                p[i] = p[i] .- centraldiff(fdist,p[i]).*(d+setup.iso)
+                maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
+                pt_dists[i] = setup.iso # ideally
             end
-
-            if d <= setup.iso
-                maxmove = max(move,maxmove)
-                continue
-            end
-
-            # bring points back to boundary if outside using central difference
-            p[i] = p[i] .- centraldiff(fdist,p[i]).*(d+setup.iso)
-            maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
-            pt_dists[i] = setup.iso # ideally
         end
 
         # increment iteration counter
         lcount = lcount + 1
 
+        # compute triangle qualities
+        triangle_qualities!(tris,triset,qualities,p,t)
+
         # save iteration stats
         if stats
-            push!(statsdata.maxmove,maxmove)
-            push!(statsdata.maxdp,maxdp)
-            triangle_qualities!(tris,triset,qualities,p,t)
+            push!(statsdata.maxmove,0)
+            push!(statsdata.maxdp,0)
             sort!(qualities) # sort for median calc and robust summation
             mine, maxe = extrema(qualities)
             push!(statsdata.average_qual, sum(qualities)/length(qualities))
@@ -378,7 +370,7 @@ function distmesh(fdist::Function,
         end
 
         # Termination criterion
-        if maxdp<setup.ptol*h
+        if min_qual>setup.min_qual
             return p, t, statsdata
         end
     end
