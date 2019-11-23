@@ -10,7 +10,7 @@ using GeometryBasics
 const suite = BenchmarkGroup()
 suite["Torus"] = BenchmarkGroup()
 suite["Sphere"] = BenchmarkGroup()
-suite["Box"] = BenchmarkGroup()
+suite["Sphere w/ stats"] = BenchmarkGroup()
 
 println("Benchmarking DistMesh.jl...")
 
@@ -46,6 +46,15 @@ for algo in algos
                                     stats=false)
     end
 end
+
+suite["Sphere w/ stats"][string(algos[1])*" edge=0.15"] =
+    @benchmarkable distmesh(fn_sphere,
+                            HUniform(),
+                            0.15,
+                            algos[1],
+                            origin = GeometryBasics.Point{3,Float64}(-1),
+                            widths = GeometryBasics.Point{3,Float64}(2),
+                            stats=true)
 
 # If a cache of tuned parameters already exists, use it, otherwise, tune and cache
 # the benchmark parameters. Reusing cached parameters is faster and more reliable

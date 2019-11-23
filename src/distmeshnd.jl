@@ -195,10 +195,10 @@ function distmesh(fdist::Function,
             push!(statsdata.maxmove,maxmove)
             push!(statsdata.maxdp,maxdp)
             triangle_qualities!(tris,triset,qualities,p,t)
-            sort!(qualities) # sort for median calc and robust summation
+            med = median!(qualities)
             mine, maxe = extrema(qualities)
             push!(statsdata.average_qual, sum(qualities)/length(qualities))
-            push!(statsdata.median_qual, qualities[round(Int,length(qualities)/2)])
+            push!(statsdata.median_qual, med)
             push!(statsdata.minimum_qual, mine)
             push!(statsdata.maximum_qual, maxe)
         end
