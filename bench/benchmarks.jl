@@ -60,21 +60,20 @@ println("Benchmarking DistMesh.jl...")
 
 timestamp = Dates.format(now(), "yyyy-mm-ddTHH_MM")
 # generate an orthogonal test suite
-for ttol in 0.01:0.01:0.05, deltat in 0.02:0.02:0.2, el = 0.05:0.05:0.2
+for ttol in 0.01:0.01:0.05, deltat in 0.05:0.05:0.2, el = (0.1,0.2), packing in (:regular, :packed)
     rt = time()
     p,t,s = distmesh(torus,
-                     huniform,
+                     HUniform(),
                      el,
-                     DistMeshSetup(deltat=deltat, retriangulation_criteria=RetriangulateMaxMove(ttol)),
+                     DistMeshSetup(deltat=deltat, ttol=ttol, distribution=packing),
                      origin = GeometryBasics.Point{3,Float64}(-2),
                      widths = GeometryBasics.Point{3,Float64}(4),
-                     stats=true,
-                     distribution=:packed)
+                     stats=true)
     running_time = time() - rt # approximate, since we mostly care about convergence factors
     item = "torus$timestamp"
     folder = joinpath(@__DIR__, "output/$item")
     !isdir(folder) && mkdir(folder)
-    param_str = "_ttol=$(ttol)_deltat=$(deltat)_el=$(el)"
+    param_str = "_ttol=$(ttol)_deltat=$(deltat)_el=$(el)_packing=$(packing)"
     # save plots
     plotout(s, DistMesh.triangle_qualities(p,t), folder, param_str)
     # save dataset as JLD
@@ -87,4 +86,3 @@ for ttol in 0.01:0.01:0.05, deltat in 0.02:0.02:0.2, el = 0.05:0.05:0.2
     end
     println(param_str)
 end
-
