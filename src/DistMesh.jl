@@ -22,6 +22,7 @@ struct DistMeshSetup{T} <: AbstractDistMeshAlgorithm
     deltat::T
     ttol::T
     ptol::T
+    nonlinear::Bool
     distribution::Symbol # intial point distribution
 end
 
@@ -29,12 +30,14 @@ function DistMeshSetup(;iso=0,
                         ptol=.001,
                         deltat=0.05,
                         ttol=0.02,
+                        nonlinear=false,
                         distribution=:regular)
     T = promote_type(typeof(iso),typeof(ptol),typeof(deltat), typeof(ttol))
     DistMeshSetup{T}(iso,
                      deltat,
                      ttol,
                      ptol,
+                     nonlinear,
                      distribution)
 end
 

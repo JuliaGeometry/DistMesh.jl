@@ -24,11 +24,10 @@ function distmesh(fdist::Function,
                   fix=nothing,
                   stats=false) where {VertType}
     # TODO: tetgen only handles Float64
+    VT = GeometryBasics.Point{3,Float64}
     if isa(fix, Nothing)
-        VT = promote_type(typeof(origin), typeof(widths))
         fp = nothing
     else
-        VT = promote_type(typeof(origin), typeof(widths), eltype(fix))
         fp = convert(Vector{VT}, fix)
     end
     o = VT(origin...)
@@ -138,10 +137,10 @@ function distmesh(fdist::Function,
 
         # Move mesh points based on edge lengths L and forces F
         for i in eachindex(pair)
-            if non_uniform && L[i] < L0[i] || L[i] < lscbrt
+            if non_uniform && L[i] < L0[i]*lscbrt || L[i] < lscbrt
                 L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
                 # compute force vectors
-                F = L0_f-L[i]
+                F = setup.nonlinear ? (L[i]+L0_f)*(L0_f-L[i])/(2*L0_f) : L0_f-L[i]
                 # edges are not allowed to pull, only repel
                 FBar = bars[i].*F./L[i]
                 # add the force vector to the node
