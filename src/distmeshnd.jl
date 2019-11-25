@@ -138,11 +138,11 @@ function distmesh(fdist::Function,
 
         # Move mesh points based on edge lengths L and forces F
         for i in eachindex(pair)
-            L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
-            # compute force vectors
-            F = L0_f-L[i]
-            # edges are not allowed to pull, only repel
-            if F > zero(eltype(L))
+            if non_uniform && L[i] < L0[i] || L[i] < lscbrt
+                L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
+                # compute force vectors
+                F = L0_f-L[i]
+                # edges are not allowed to pull, only repel
                 FBar = bars[i].*F./L[i]
                 # add the force vector to the node
                 b1 = pair[i][1]
