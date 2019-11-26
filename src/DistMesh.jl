@@ -85,6 +85,7 @@ Uniform edge length function.
 """
 struct HUniform end
 
+include("common.jl")
 include("diff.jl")
 include("pointdistribution.jl")
 include("distmeshnd.jl")
