@@ -27,8 +27,9 @@ fn_sphere(v) = sqrt(sum(v.^2)) -1
 #
 
 for algo in algos
-    for el in (0.15,0.2)
-        suite["Torus"][string(algo)*" edge="*string(el)] =
+    for el in (0.12,0.17)
+        ty_str = string(algo)*" edge="*string(el)
+        suite["Torus"][ty_str] =
             @benchmarkable distmesh(fn_torus,
                                     HUniform(),
                                     $el,
@@ -36,14 +37,31 @@ for algo in algos
                                     origin = GeometryBasics.Point{3,Float64}(-2),
                                     widths = GeometryBasics.Point{3,Float64}(4),
                                     stats=false)
-        suite["Sphere"][string(algo)*" edge="*string(el)] =
+                    p,t,_ = distmesh(fn_torus,
+                                    HUniform(),
+                                    el,
+                                    algo,
+                                    origin = GeometryBasics.Point{3,Float64}(-2),
+                                    widths = GeometryBasics.Point{3,Float64}(4),
+                                    stats=false)
+        @show "torus $ty_str", length(p), length(t)
+        suite["Sphere"][ty_str] =
             @benchmarkable distmesh(fn_sphere,
                                     HUniform(),
                                     $el,
                                     $algo,
                                     origin = GeometryBasics.Point{3,Float64}(-1),
+                                    widths = GeometryBasics.
+                                    Point{3,Float64}(2),
+                                    stats=false)
+                    p,t,_ = distmesh(fn_sphere,
+                                    HUniform(),
+                                    el,
+                                    algo,
+                                    origin = GeometryBasics.Point{3,Float64}(-1),
                                     widths = GeometryBasics.Point{3,Float64}(2),
                                     stats=false)
+        @show "sphere $ty_str", length(p), length(t)
     end
 end
 
