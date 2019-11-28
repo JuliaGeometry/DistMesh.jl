@@ -24,11 +24,10 @@ function distmesh(fdist::Function,
                   fix=nothing,
                   stats=false) where {VertType}
     # TODO: tetgen only handles Float64
+    VT = GeometryBasics.Point{3,Float64}
     if isa(fix, Nothing)
-        VT = promote_type(typeof(origin), typeof(widths))
         fp = nothing
     else
-        VT = promote_type(typeof(origin), typeof(widths), eltype(fix))
         fp = convert(Vector{VT}, fix)
     end
     o = VT(origin...)
@@ -72,16 +71,8 @@ function distmesh(fdist::Function,
         facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
     end
 
-    # use nearest neighbors kd tree to spatially sort points
-    sorted_pts = false
-    leafsize=5
-    if !have_fixed
-        kdtree = KDTree(p, leafsize=5)
-        p = kdtree.data
-        sorted_pts = true
-    end
-
-    pt_dists = map(fdist, p) # cache to store point locations so we can minimize fdist calls
+    # use nearest neighbors kd tree to spatially sort points if point set is large
+    sort_pts = !have_fixed && length(p) > 1500
 
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
@@ -105,11 +96,14 @@ function distmesh(fdist::Function,
     @inbounds while true
         # if large move, retriangulation
         if maxmove>setup.ttol*h
-            if !have_fixed
-                kdtree = KDTree(p, leafsize=5)
+
+            # use KD tree to improve cache locality of points
+            if sort_pts
+                kdtree = KDTree(p, leafsize=10) #TODO: Optimal leaf size?
                 p = kdtree.data
             end
-            delaunayn!(fdist, p, t, geps, sorted_pts) # compute a new delaunay triangulation
+
+            delaunayn!(fdist, p, t, geps, sort_pts) # compute a new delaunay triangulation
 
             tet_to_edges!(pair, pair_set, t) # Describe each edge by a unique pair of nodes
 
@@ -117,9 +111,14 @@ function distmesh(fdist::Function,
             resize!(bars, length(pair))
             resize!(L, length(pair))
             non_uniform && resize!(L0, length(pair))
-            for i in eachindex(p)
-                pt_dists[i] = fdist(p[i])
+
+            # if the points were sorted we need to update the distance cache
+            if sort_pts
+                for i in eachindex(p)
+                    pt_dists[i] = fdist(p[i])
+                end
             end
+
             stats && push!(statsdata.retriangulations, lcount)
         end
 
