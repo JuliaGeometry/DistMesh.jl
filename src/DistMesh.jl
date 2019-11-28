@@ -1,6 +1,7 @@
 module DistMesh
 
 using LinearAlgebra,
+      NearestNeighbors,
       TetGen
 using GeometryBasics
 using GeometryBasics: Triangle, Tetrahedron, Mesh, Polytope, Point

@@ -72,6 +72,17 @@ function distmesh(fdist::Function,
         facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
     end
 
+    # use nearest neighbors kd tree to spatially sort points
+    sorted_pts = false
+    leafsize=5
+    if !have_fixed
+        kdtree = KDTree(p, leafsize=5)
+        p = kdtree.data
+        sorted_pts = true
+    end
+
+    pt_dists = map(fdist, p) # cache to store point locations so we can minimize fdist calls
+
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[]                 # edge indices (Int32 since we use Tetgen)
@@ -94,8 +105,11 @@ function distmesh(fdist::Function,
     @inbounds while true
         # if large move, retriangulation
         if maxmove>setup.ttol*h
-
-            delaunayn!(fdist, p, t, geps) # compute a new delaunay triangulation
+            if !have_fixed
+                kdtree = KDTree(p, leafsize=5)
+                p = kdtree.data
+            end
+            delaunayn!(fdist, p, t, geps, sorted_pts) # compute a new delaunay triangulation
 
             tet_to_edges!(pair, pair_set, t) # Describe each edge by a unique pair of nodes
 
@@ -103,7 +117,9 @@ function distmesh(fdist::Function,
             resize!(bars, length(pair))
             resize!(L, length(pair))
             non_uniform && resize!(L0, length(pair))
-
+            for i in eachindex(p)
+                pt_dists[i] = fdist(p[i])
+            end
             stats && push!(statsdata.retriangulations, lcount)
         end
 
@@ -207,6 +223,14 @@ function distmesh(fdist::Function,
         facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
     end
 
+    # use nearest neighbors kd tree to spatially sort points
+    sorted_pts = false
+    if !have_fixed
+        kdtree = KDTree(p, leafsize=3)
+        p = kdtree.data
+        sorted_pts = true
+    end
+
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[]                 # edge indices (Int32 since we use Tetgen)
@@ -230,7 +254,7 @@ function distmesh(fdist::Function,
         # if large move, retriangulation
         if maxmove>setup.ttol*h
 
-            delaunayn!(fdist, p, t, geps) # compute a new delaunay triangulation
+            delaunayn!(fdist, p, t, geps, sorted_pts) # compute a new delaunay triangulation
 
             tet_to_edges!(pair, pair_set, t) # Describe each edge by a unique pair of nodes
 
