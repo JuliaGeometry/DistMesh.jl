@@ -24,11 +24,10 @@ function distmesh(fdist::Function,
                   fix=nothing,
                   stats=false) where {VertType}
     # TODO: tetgen only handles Float64
+    VT = GeometryBasics.Point{3,Float64}
     if isa(fix, Nothing)
-        VT = promote_type(typeof(origin), typeof(widths))
         fp = nothing
     else
-        VT = promote_type(typeof(origin), typeof(widths), eltype(fix))
         fp = convert(Vector{VT}, fix)
     end
     o = VT(origin...)
