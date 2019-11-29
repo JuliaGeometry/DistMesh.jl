@@ -92,14 +92,17 @@ function distmesh(fdist::Function,
     # information on each iteration
     statsdata = DistMeshStatistics()
     lcount = 0 # iteration counter
+    triangulationcount = 0 # triangulation counter
+    resortinterval = 10
 
     @inbounds while true
         # if large move, retriangulation
         if maxmove>setup.ttol*h
 
             # use hilbert sort to improve cache locality of points
-            sort_pts && hilbertsort!(p)
-
+            if sort_pts && iszero(triangulationcount%resortinterval)
+                hilbertsort!(p)
+            end
             delaunayn!(fdist, p, t, geps, sort_pts) # compute a new delaunay triangulation
 
             tet_to_edges!(pair, pair_set, t) # Describe each edge by a unique pair of nodes
@@ -110,12 +113,12 @@ function distmesh(fdist::Function,
             non_uniform && resize!(L0, length(pair))
 
             # if the points were sorted we need to update the distance cache
-            if sort_pts
+            if sort_pts && iszero(triangulationcount%resortinterval)
                 for i in eachindex(p)
                     pt_dists[i] = fdist(p[i])
                 end
             end
-
+            triangulationcount += 1
             stats && push!(statsdata.retriangulations, lcount)
         end
 
