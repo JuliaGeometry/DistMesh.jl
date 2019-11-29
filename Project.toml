@@ -6,7 +6,6 @@ version = "0.1.0"
 [deps]
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-NearestNeighbors = "b8a86587-4115-5ab1-83bc-aa920d37bbce"
 TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
 
 [compat]
