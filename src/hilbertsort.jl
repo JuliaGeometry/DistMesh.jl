@@ -32,14 +32,14 @@ const backward = Backward()
 Base.:!(::Forward) = backward
 Base.:!(::Backward) = forward
 
-compare(::Forward, ::CoordinateX, p1::AbstractPoint, p2::AbstractPoint) = getx(p1) < getx(p2)
-compare(::Backward, ::CoordinateX, p1::AbstractPoint, p2::AbstractPoint) = getx(p1) > getx(p2)
-compare(::Forward, ::CoordinateY, p1::AbstractPoint, p2::AbstractPoint) = gety(p1) < gety(p2)
-compare(::Backward, ::CoordinateY, p1::AbstractPoint, p2::AbstractPoint) = gety(p1) > gety(p2)
-compare(::Forward, ::CoordinateZ, p1::AbstractPoint, p2::AbstractPoint) = getz(p1) < getz(p2)
-compare(::Backward, ::CoordinateZ, p1::AbstractPoint, p2::AbstractPoint) = getz(p1) > getz(p2)
+compare(::Forward, ::CoordinateX, p1::AbstractVector, p2::AbstractVector) = p1[1] < p2[1]
+compare(::Backward, ::CoordinateX, p1::AbstractVector, p2::AbstractVector) = p1[1] > p2[1]
+compare(::Forward, ::CoordinateY, p1::AbstractVector, p2::AbstractVector) = p1[2] < p2[2]
+compare(::Backward, ::CoordinateY, p1::AbstractVector, p2::AbstractVector) = p1[2] > p2[2]
+compare(::Forward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] < p2[3]
+compare(::Backward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] > p2[3]
 
-function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v::Array{T,1}, k::Int, lo::Int, hi::Int) where T<:AbstractPoint
+function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v::Array{T,1}, k::Int, lo::Int, hi::Int) where T<:AbstractVector
     lo <= k <= hi || error("select index $k is out of range $lo:$hi")
     @inbounds while lo < hi
         if hi-lo == 1
@@ -68,26 +68,28 @@ function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v
     return v[lo]
 end
 
-function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, coordinate::AbstractCoordinate, a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64=4) where T<:AbstractPoint2D
-    hi-lo <= lim && return a
 
-    i2 = (lo+hi)>>>1
-    i1 = (lo+i2)>>>1
-    i3 = (i2+hi)>>>1
+# 2D version
+# function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, coordinate::AbstractCoordinate, a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64=4) where T<:AbstractPoint2D
+#     hi-lo <= lim && return a
 
-    select!(directionx, coordinate, a, i2, lo, hi)
-    select!(directiony, next2d(coordinate), a, i1, lo, i2)
-    select!(!directiony, next2d(coordinate), a, i3, i2, hi)
+#     i2 = (lo+hi)>>>1
+#     i1 = (lo+i2)>>>1
+#     i3 = (i2+hi)>>>1
 
-    hilbertsort!(directiony, directionx, next2d(coordinate), a, lo, i1, lim)
-    hilbertsort!(directionx, directiony, coordinate, a, i1, i2, lim)
-    hilbertsort!(directionx, directiony, coordinate, a, i2, i3, lim)
-    hilbertsort!(!directiony, !directionx, next2d(coordinate), a, i3, hi, lim)
+#     select!(directionx, coordinate, a, i2, lo, hi)
+#     select!(directiony, next2d(coordinate), a, i1, lo, i2)
+#     select!(!directiony, next2d(coordinate), a, i3, i2, hi)
 
-    return a
-end
+#     hilbertsort!(directiony, directionx, next2d(coordinate), a, lo, i1, lim)
+#     hilbertsort!(directionx, directiony, coordinate, a, i1, i2, lim)
+#     hilbertsort!(directionx, directiony, coordinate, a, i2, i3, lim)
+#     hilbertsort!(!directiony, !directionx, next2d(coordinate), a, i3, hi, lim)
 
-function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, directionz::AbstractDirection, coordinate::AbstractCoordinate, a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64=8) where T<:AbstractPoint3D
+#     return a
+# end
+
+function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, directionz::AbstractDirection, coordinate::AbstractCoordinate, a::Vector, lo::Int64, hi::Int64, lim::Int64=8)
     hi-lo <= lim && return a
 
     i4 = (lo+hi)>>>1
@@ -118,7 +120,7 @@ function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirecti
     return a
 end
 
-hilbertsort!(a::Array{T,1}) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, 1, length(a))
-hilbertsort!(a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, lo, hi, lim)
-hilbertsort!(a::Array{T,1}) where {T<:AbstractPoint3D} = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a))
-hilbertsort!(a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64) where {T<:AbstractPoint3D} = hilbertsort!(backward, backward, backward, coordinatey, a, lo, hi, lim)
+#hilbertsort!(a::Array{T,1}) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, 1, length(a))
+#hilbertsort!(a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, lo, hi, lim)
+hilbertsort!(a::Vector) = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a))
+hilbertsort!(a::Vector, lo::Int64, hi::Int64, lim::Int64) = hilbertsort!(backward, backward, backward, coordinatey, a, lo, hi, lim)
