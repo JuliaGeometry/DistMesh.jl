@@ -72,7 +72,7 @@ function distmesh(fdist::Function,
     end
 
     # use nearest neighbors kd tree to spatially sort points if point set is large
-    sort_pts = !have_fixed && length(p) > 1500
+    sort_pts = !have_fixed
 
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
@@ -97,11 +97,8 @@ function distmesh(fdist::Function,
         # if large move, retriangulation
         if maxmove>setup.ttol*h
 
-            # use KD tree to improve cache locality of points
-            if sort_pts
-                kdtree = KDTree(p, leafsize=10) #TODO: Optimal leaf size?
-                p = kdtree.data
-            end
+            # use hilbert sort to improve cache locality of points
+            sort_pts && hilbertsort!(p)
 
             delaunayn!(fdist, p, t, geps, sort_pts) # compute a new delaunay triangulation
 

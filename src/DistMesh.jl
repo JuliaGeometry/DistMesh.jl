@@ -93,6 +93,7 @@ include("distmeshnd.jl")
 include("tetgen.jl")
 include("quality.jl")
 include("decompositions.jl")
+include("hilbertsort.jl")
 
 #export distmeshsurface
 export distmesh, DistMeshSetup, DistMeshStatistics, HUniform
