@@ -8,38 +8,21 @@
 
 # modifications for StaticArrays: sjkelly
 
-abstract type AbstractCoordinate end
-mutable struct CoordinateX <: AbstractCoordinate end
-mutable struct CoordinateY <: AbstractCoordinate end
-mutable struct CoordinateZ <: AbstractCoordinate end
-const coordinatex = CoordinateX()
-const coordinatey = CoordinateY()
-const coordinatez = CoordinateZ()
-next2d(::CoordinateX) = coordinatey
-next2d(::CoordinateY) = coordinatex
-next3d(::CoordinateX) = coordinatey
-next3d(::CoordinateY) = coordinatez
-next3d(::CoordinateZ) = coordinatex
-nextnext3d(::CoordinateX) = coordinatez
-nextnext3d(::CoordinateY) = coordinatex
-nextnext3d(::CoordinateZ) = coordinatey
+const coordinatex = 1
+const coordinatey = 2
+const coordinatez = 3
+next2d(c) = c % 2 + 1
+next3d(c) = c % 3 + 1
+nextnext3d(c) = (c + 1) % 3 + 1
 
-abstract type AbstractDirection end
-mutable struct Forward <: AbstractDirection end
-mutable struct Backward <: AbstractDirection end
-const forward = Forward()
-const backward = Backward()
-Base.:!(::Forward) = backward
-Base.:!(::Backward) = forward
+const forward = true
+const backward = false
 
-compare(::Forward, ::CoordinateX, p1::AbstractVector, p2::AbstractVector) = p1[1] < p2[1]
-compare(::Backward, ::CoordinateX, p1::AbstractVector, p2::AbstractVector) = p1[1] > p2[1]
-compare(::Forward, ::CoordinateY, p1::AbstractVector, p2::AbstractVector) = p1[2] < p2[2]
-compare(::Backward, ::CoordinateY, p1::AbstractVector, p2::AbstractVector) = p1[2] > p2[2]
-compare(::Forward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] < p2[3]
-compare(::Backward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] > p2[3]
+function compare(dir, coord, p1::AbstractVector, p2::AbstractVector)
+    dir == forward ? p1[coord] < p2[coord] : p1[coord] > p2[coord]
+end
 
-function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v::Array{T,1}, k::Int, lo::Int, hi::Int) where T<:AbstractVector
+function select!(direction, coordinate, v::Array{T,1}, k::Int, lo::Int, hi::Int) where T<:AbstractVector
     lo <= k <= hi || error("select index $k is out of range $lo:$hi")
     @inbounds while lo < hi
         if hi-lo == 1
@@ -89,7 +72,7 @@ end
 #     return a
 # end
 
-function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, directionz::AbstractDirection, coordinate::AbstractCoordinate, a::Vector, lo::Int64, hi::Int64, lim::Int64=8)
+function hilbertsort!(directionx, directiony, directionz, coordinate, a::Vector, lo::Int64, hi::Int64, lim::Int64=8)
     hi-lo <= lim && return a
 
     i4 = (lo+hi)>>>1
