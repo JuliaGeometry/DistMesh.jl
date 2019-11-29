@@ -4,28 +4,7 @@ using GeometryBasics
 
 include("vals.jl")
 
-@testset "distmesh 3D" begin
-    d(p) = sqrt(sum(p.^2))-1
-    p,t,_ = distmesh(d,HUniform(),0.2)
-    @test length(p) == 485
-    @test length(t) == 2207
 
-    p,t,_ = distmesh(d,HUniform(),0.2, DistMeshSetup(distribution=:packed))
-    @test length(p) == 742
-    @test length(t) == 3472
-
-    # test stats is not messing
-    p,t,s = distmesh(d,HUniform(),0.2, stats=true)
-    @test length(p) == 485
-    @test length(t) == 2207
-
-    p,t,s = distmesh(d,HUniform(),0.4, stats=true)
-    @test length(p) == 56
-    @test length(t) == 186
-    for fn in fieldnames(typeof(s))
-        @test isapprox(getproperty(s,fn), getproperty(stat_04,fn))
-    end
-end
 
 @testset "point distributions" begin
     vlen(a,b) = sqrt(sum((a-b).^2))
@@ -69,5 +48,28 @@ end
         tris = Tuple{Int,Int,Int}[]
         DistMesh.tets_to_tris!(tris,simps)
         @test tris == [(1, 2, 3), (1, 2, 4), (1, 3, 4), (2, 3, 4), (2, 3, 5), (2, 4, 5), (3, 4, 5)]
+    end
+end
+
+@testset "distmesh 3D" begin
+    d(p) = sqrt(sum(p.^2))-1
+    p,t,_ = distmesh(d,HUniform(),0.2)
+    @test length(p) == 485
+    @test length(t) == 2207
+
+    p,t,_ = distmesh(d,HUniform(),0.2, DistMeshSetup(distribution=:packed))
+    @test length(p) == 742
+    @test length(t) == 3472
+
+    # test stats is not messing
+    p,t,s = distmesh(d,HUniform(),0.2, stats=true)
+    @test length(p) == 485
+    @test length(t) == 2207
+
+    p,t,s = distmesh(d,HUniform(),0.4, stats=true)
+    @test length(p) == 56
+    @test length(t) == 186
+    for fn in fieldnames(typeof(s))
+        @test isapprox(getproperty(s,fn), getproperty(stat_04,fn))
     end
 end
