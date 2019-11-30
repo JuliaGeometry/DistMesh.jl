@@ -100,7 +100,9 @@ function distmesh(fdist::Function,
                 hilbertsort!(p)
             end
 
-            delaunayn!(fdist, p, t, geps, false) # compute a new delaunay triangulation
+            # compute a new delaunay triangulation
+            # we use the default random insertion method
+            delaunayn!(fdist, p, t, geps, false)
 
             tet_to_edges!(pair, pair_set, t) # Describe each edge by a unique pair of nodes
 
