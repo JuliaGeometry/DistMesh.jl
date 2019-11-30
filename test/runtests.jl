@@ -51,6 +51,18 @@ end
     end
 end
 
+@testset "hilbert sort" begin
+    rng = 0:0.3:1
+    a = Vector{Vector{Float64}}(undef,length(rng)^3)
+    i = 1
+    for xi in rng, yi in rng, zi in rng
+        a[i] = [xi,yi,zi]
+        i += 1
+    end
+    DistMesh.hilbertsort!(a)
+    @test a == hilbert_a
+end
+
 @testset "distmesh 3D" begin
     d(p) = sqrt(sum(p.^2))-1
     p,t,_ = distmesh(d,HUniform(),0.2)
