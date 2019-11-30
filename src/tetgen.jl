@@ -3,8 +3,13 @@ function delaunayn(points)
     tetio
 end
 
-function delaunayn!(fdist, p, t, geps)
-    triangulation = delaunayn(p)
+function delaunayn_nosort(points)
+    tetio = tetrahedralize(TetGen.TetgenIO(points), "Qb/1") # Q- Quiet
+    tetio
+end
+
+function delaunayn!(fdist, p, t, geps, sorted_pts)
+    triangulation = sorted_pts ? delaunayn_nosort(p) : delaunayn(p)
     t_d = triangulation.tetrahedra
     resize!(t, length(t_d))
     copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
