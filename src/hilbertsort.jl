@@ -11,44 +11,70 @@
 const coordinatex = 1
 const coordinatey = 2
 const coordinatez = 3
-next2d(c) = c % 0x2 + 0x1
-next3d(c) = c % 0x3 + 0x1
-nextnext3d(c) = (c + 0x1) % 0x3 + 0x1
+next2d(c) = c % 2 + 1
+next3d(c) = c % 3 + 1
+nextnext3d(c) = (c + 1) % 3 + 1
 
 const forward = true
 const backward = false
 
-function compare(dir, coord, p1::AbstractVector, p2::AbstractVector)
-    dir == forward ? p1[coord] < p2[coord] : p1[coord] > p2[coord]
-end
-
-function select!(direction, coordinate, v::Array{T,1}, k::Integer, lo::Integer, hi::Integer) where T<:AbstractVector
-    lo <= k <= hi || error("select index $k is out of range $lo:$hi")
-    @inbounds while lo < hi
-        if isone(hi-lo)
-            if compare(direction, coordinate, v[hi], v[lo])
-                v[lo], v[hi] = v[hi], v[lo]
+function select!(direction, coord, v::Array{T,1}, k::Integer, lo::Integer, hi::Integer) where T<:AbstractVector
+    #lo <= k <= hi || error("select index $k is out of range $lo:$hi")
+    if direction == forward
+        @inbounds while lo < hi
+            if isone(hi-lo)
+                if v[hi][coord] < v[lo][coord]
+                    v[lo], v[hi] = v[hi], v[lo]
+                end
+                return #v[k]
             end
-            return v[k]
+            pivot = v[(lo+hi)>>>1]
+            i, j = lo, hi
+            while true
+                pivot_elt = pivot[coord]
+                while v[i][coord] < pivot_elt; i += 1; end
+                while pivot_elt < v[j][coord]; j -= 1; end
+                i <= j || break
+                v[i], v[j] = v[j], v[i]
+                i += 1; j -= 1
+            end
+            if k <= j
+                hi = j
+            elseif i <= k
+                lo = i
+            else
+                return #pivot
+            end
         end
-        pivot = v[(lo+hi)>>>0x1]
-        i, j = lo, hi
-        while true
-            while compare(direction, coordinate, v[i], pivot); i += 0x1; end
-            while compare(direction, coordinate, pivot, v[j]); j -= 0x1; end
-            i <= j || break
-            v[i], v[j] = v[j], v[i]
-            i += 0x1; j -= 0x1
-        end
-        if k <= j
-            hi = j
-        elseif i <= k
-            lo = i
-        else
-            return pivot
+    else
+        @inbounds while lo < hi
+            if isone(hi-lo)
+                if v[hi][coord] > v[lo][coord]
+                    v[lo], v[hi] = v[hi], v[lo]
+                end
+                return #v[k]
+            end
+            pivot = v[(lo+hi)>>>1]
+            i, j = lo, hi
+            while true
+                pivot_elt = pivot[coord]
+                while v[i][coord] > pivot_elt; i += 1; end
+                while pivot_elt > v[j][coord]; j -= 1; end
+                i <= j || break
+                v[i], v[j] = v[j], v[i]
+                i += 1; j -= 1
+            end
+            if k <= j
+                hi = j
+            elseif i <= k
+                lo = i
+            else
+                return #pivot
+            end
         end
     end
-    return v[lo]
+    #return v[lo]
+    nothing
 end
 
 
@@ -75,13 +101,13 @@ end
 function hilbertsort!(directionx, directiony, directionz, coordinate, a::Vector, lo::Integer, hi::Integer, lim::Integer=8)
     hi-lo <= lim && return a
 
-    i4 = (lo+hi)>>>0x1
-    i2 = (lo+i4)>>>0x1
-    i1 = (lo+i2)>>>0x1
-    i3 = (i2+i4)>>>0x1
-    i6 = (i4+hi)>>>0x1
-    i5 = (i4+i6)>>>0x1
-    i7 = (i6+hi)>>>0x1
+    i4 = (lo+hi)>>>1
+    i2 = (lo+i4)>>>1
+    i1 = (lo+i2)>>>1
+    i3 = (i2+i4)>>>1
+    i6 = (i4+hi)>>>1
+    i5 = (i4+i6)>>>1
+    i7 = (i6+hi)>>>1
 
     select!(directionx, coordinate, a, i4, lo, hi)
     select!(directiony, next3d(coordinate), a, i2, lo, i4)
