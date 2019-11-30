@@ -28,6 +28,7 @@ struct DistMeshSetup{T} <: AbstractDistMeshAlgorithm
     ptol::T
     sort::Bool # use hilbert sort to cache-localize points
     sort_interval::Int # retriangulations before resorting
+    nonlinear::Bool # uses nonlinear edge force
     distribution::Symbol # intial point distribution
 end
 
@@ -37,6 +38,7 @@ function DistMeshSetup(;iso=0,
                         ttol=0.02,
                         sort=false,
                         sort_interval=20,
+                        nonlinear=false,
                         distribution=:regular)
     T = promote_type(typeof(iso),typeof(ptol),typeof(deltat), typeof(ttol))
     DistMeshSetup{T}(iso,
@@ -45,6 +47,7 @@ function DistMeshSetup(;iso=0,
                      ptol,
                      sort,
                      sort_interval,
+                     nonlinear,
                      distribution)
 end
 

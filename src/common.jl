@@ -34,8 +34,7 @@ function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
         if non_uniform && L[i] < L0[i]*lscbrt || L[i] < lscbrt
             L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
             # compute force vectors
-            #F = setup.nonlinear ? (L[i]+L0_f)*(L0_f-L[i])/(2*L0_f) : L0_f-L[i]
-            F = L0_f-L[i]
+            F = setup.nonlinear ? (L[i]+L0_f)*(L0_f-L[i])/(2*L0_f) : L0_f-L[i]
             # edges are not allowed to pull, only repel
             FBar = bars[i].*F./L[i]
             # add the force vector to the node
