@@ -18,7 +18,10 @@ println("Benchmarking DistMesh.jl...")
 # Algorithms to benchmark
 #
 
-algos = [DistMeshSetup(deltat=0.1, distribution=:packed),DistMeshSetup(distribution=:packed)]
+algos = [DistMeshSetup(deltat=0.1, distribution=:packed),
+         DistMeshSetup(distribution=:packed),
+         DistMeshSetup(deltat=0.1, distribution=:packed,sort=true),
+         DistMeshSetup(distribution=:packed,sort=true)]
 
 fn_torus(v) = (sqrt(v[1]^2+v[2]^2)-0.5)^2 + v[3]^2 - 0.25 # torus
 fn_sphere(v) = sqrt(sum(v.^2)) -1
