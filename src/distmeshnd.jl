@@ -87,13 +87,15 @@ function distmesh(fdist::Function,
         tris = NTuple{3,Int32}[]        # triangles used for quality checks
         triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
         qualities = eltype(VertType)[]
+        prev_mean_qual = typemax(eltype(VertType))
+        new_mean_qual = typemin(eltype(VertType))
+        min_qual = typemin(eltype(VertType))
     end
 
     if quality_mesh
         p_old = copy(p)
-        prev_mean_qual = typemax(eltype(VertType))
-        new_mean_qual = typemin(eltype(VertType))
     end
+
     # information on each iteration
     statsdata = DistMeshStatistics()
     lcount = 0 # iteration counter
@@ -101,6 +103,7 @@ function distmesh(fdist::Function,
 
     @inbounds while true
         # if large move, retriangulation
+        # alternatively for quality metris we use the mean quality
         if (!quality_mesh && maxmove>setup.ttol*h) || quality_mesh && prev_mean_qual > new_mean_qual
 
             # if we are using quality meshing we revert the points
@@ -134,13 +137,16 @@ function distmesh(fdist::Function,
                 end
             end
 
-            # if we ar using a quality based retriangulation, we need triangles
-            if quality_mesh
+            # if we are using a quality based retriangulation, we need triangles
+            if quality_mesh || stats
                 # get triangles
                 tets_to_tris!(tris, triset, t)
+                resize!(qualities, length(tris))
             end
-            triangulationcount += 1
+
             stats && push!(statsdata.retriangulations, lcount)
+
+            triangulationcount += 1
         end
 
         compute_displacements!(fh, dp, pair, L, L0, bars, p, setup, VertType)
@@ -152,10 +158,9 @@ function distmesh(fdist::Function,
             end
         end
 
-        if !quality_mesh
-            maxdp = typemin(eltype(VertType))
-            maxmove = typemin(eltype(VertType))
-        end
+        # TODO: We don't really need displacmenets for quality mesh, but we can use it for stats
+        maxdp = typemin(eltype(VertType))
+        maxmove = typemin(eltype(VertType))
         # apply point forces and
         # bring outside points back to the boundary
         for i in eachindex(p)
@@ -173,15 +178,13 @@ function distmesh(fdist::Function,
 
             # if we are not using quality improvements for retriangulation and termination,
             # track displacments and movements
-            if !quality_mesh
-                if d < -geps
-                    maxdp = max(maxdp, setup.deltat*sqrt(sum(dp[i].^2)))
-                end
+            if d < -geps
+                maxdp = max(maxdp, setup.deltat*sqrt(sum(dp[i].^2)))
+            end
 
-                if d <= setup.iso
-                    maxmove = max(move,maxmove)
-                    continue
-                end
+            if d <= setup.iso
+                maxmove = max(move,maxmove)
+                continue
             end
 
             # bring points back to boundary if outside using central difference
@@ -193,23 +196,29 @@ function distmesh(fdist::Function,
         # increment iteration counter
         lcount = lcount + 1
 
+        # some setup for quality mesh or stats collection
+        if quality_mesh || stats
+            triangle_qualities!(tris, qualities, p, t)
+            min_qual = minimum(qualities)
+            mean_qual = sum(qualities)/length(qualities)
+            prev_mean_qual = new_mean_qual
+            new_mean_qual = mean_qual
+        end
         # save iteration stats
         if stats
-            if !quality_mesh
-                push!(statsdata.maxmove,maxmove)
-                push!(statsdata.maxdp,maxdp)
-            end
-            triangle_qualities!(tris,triset,qualities,p,t)
+            push!(statsdata.maxmove,maxmove)
+            push!(statsdata.maxdp,maxdp)
             sort!(qualities) # sort for median calc and robust summation
-            mine, maxe = extrema(qualities)
-            push!(statsdata.average_qual, sum(qualities)/length(qualities))
+            max_qual = maximum(qualities)
+            push!(statsdata.average_qual, mean_qual)
+            # TODO: We can use Statistic Median! here without doing a full sort
             push!(statsdata.median_qual, qualities[round(Int,length(qualities)/2)])
-            push!(statsdata.minimum_qual, mine)
-            push!(statsdata.maximum_qual, maxe)
+            push!(statsdata.minimum_qual, min_qual)
+            push!(statsdata.maximum_qual, max_qual)
         end
 
         # Termination criterion
-        if !quality_mesh && maxdp<setup.ptol*h
+        if (!quality_mesh && maxdp<setup.ptol*h) || (quality_mesh && min_qual < setup.min_quality)
             return p, t, statsdata
         end
     end
