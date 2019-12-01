@@ -2,7 +2,7 @@
 function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
                                 ::Type{VertType}) where {VertType}
 
-    non_uniform = isa(typeof(L0), AbstractVector)
+    non_uniform = !isa(fh, HUniform)
 
     # compute edge lengths (L) and adaptive edge lengths (L0)
     # Lp norm (p=3) is partially computed here

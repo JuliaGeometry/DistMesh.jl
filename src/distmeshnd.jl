@@ -78,14 +78,16 @@ function distmesh(fdist::Function,
     dp = zeros(VertType, length(p))             # displacement at each node
     bars = VertType[]                           # the vector of each edge
     L = eltype(VertType)[]                      # vector length of each edge
-    L0 = non_uniform ? eltype(VertType)[] : nothing # desired edge length computed by dh (edge length function)
+    L0 = eltype(VertType)[]                     # desired edge length computed by dh (edge length function)
     t = GeometryBasics.SimplexFace{4,Int32}[]   # tetrahedra indices from delaunay triangulation
     maxmove = typemax(eltype(VertType))         # stores an iteration max movement for retriangulation
 
     # arrays for tracking quality metrics
-    tris = NTuple{3,Int32}[]        # triangles used for quality checks
-    triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
-    qualities = eltype(VertType)[]
+    if quality_mesh || stats
+        tris = NTuple{3,Int32}[]        # triangles used for quality checks
+        triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
+        qualities = eltype(VertType)[]
+    end
 
     # information on each iteration
     statsdata = DistMeshStatistics()
