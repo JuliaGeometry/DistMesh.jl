@@ -1,4 +1,7 @@
 
+const tetpairs = ((1,2),(1,3),(1,4),(2,3),(2,4),(3,4))
+const tettriangles = ((1,2,3),(1,2,4),(2,3,4),(1,3,4))
+
 """
 convert tets to tris,
 returned sorted and unique

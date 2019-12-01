@@ -1,17 +1,17 @@
 module DistMesh
 
-using LinearAlgebra,
+using GeometryBasics,
+      LinearAlgebra,
       TetGen
-using GeometryBasics
-using GeometryBasics: Triangle, Tetrahedron, Mesh, Polytope, Point
-
-const tetpairs = ((1,2),(1,3),(1,4),(2,3),(2,4),(3,4))
-const tettriangles = ((1,2,3),(1,2,4),(2,3,4),(1,3,4))
 
 abstract type AbstractDistMeshAlgorithm end
 
 """
     DistMeshSetup
+
+    The original DistMesh retriangulation/termination criterea. Will trigger a
+    retriangulation once a point movement greater than ttol is exceeded.
+    Will terminate once an iteration produces a point movement less than ptol.
 
     Takes Keyword arguments as follows:
 
@@ -102,7 +102,7 @@ end
 DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[],[],[])
 
 """
-Uniform edge length function.
+Uniform edge length specifier.
 """
 struct HUniform end
 
