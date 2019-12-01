@@ -38,18 +38,19 @@ end
 function distmesh(fdist::Function,
                   fh,
                   h::Number,
-                  setup::DistMeshSetup,
+                  setup::SetupTy,
                   origin,
                   widths,
                   fix,
                   ::Val{stats},
-                  ::Type{VertType}) where {VertType, stats}
+                  ::Type{VertType}) where {VertType, stats, SetupTy <: AbstractDistMeshAlgorithm}
 
     geps=1e-1*h+setup.iso # parameter for filtering tets outside bounds and considering for max displacment of a node
 
     # static parameter info
     non_uniform = isa(fh, Function) # so we can elide fh calls
     have_fixed = !isa(fix, Nothing)
+    quality_mesh = isa(SetupTy, DistMeshQuality) # if we are using quality based retri and termination
 
     #ptol=.001; ttol=.1; L0mult=1+.4/2^(dim-1); deltat=.2; geps=1e-1*h;
 
@@ -93,7 +94,7 @@ function distmesh(fdist::Function,
 
     @inbounds while true
         # if large move, retriangulation
-        if maxmove>setup.ttol*h
+        if !quality_mesh && maxmove>setup.ttol*h
 
             # use hilbert sort to improve cache locality of points
             if setup.sort && iszero(triangulationcount % setup.sort_interval)
@@ -117,6 +118,12 @@ function distmesh(fdist::Function,
                     pt_dists[i] = fdist(p[i])
                 end
             end
+
+            # if we ar using a quality based retriangulation, we need triangles
+            if quality_mesh
+                # get triangles
+                tets_to_tris!(tris, triset, t)
+            end
             triangulationcount += 1
             stats && push!(statsdata.retriangulations, lcount)
         end
@@ -132,8 +139,10 @@ function distmesh(fdist::Function,
 
         # apply point forces and
         # bring outside points back to the boundary
-        maxdp = typemin(eltype(VertType))
-        maxmove = typemin(eltype(VertType))
+        if !quality_mesh
+            maxdp = typemin(eltype(VertType))
+            maxmove = typemin(eltype(VertType))
+        end
         for i in eachindex(p)
 
             p0 = p[i] # store original point location
@@ -147,18 +156,22 @@ function distmesh(fdist::Function,
             d = d_est < -geps ? d_est : fdist(p[i]) # determine if we need correct or approximate distance
             pt_dists[i] = d                         # store distance
 
-            if d < -geps
-                maxdp = max(maxdp, setup.deltat*sqrt(sum(dp[i].^2)))
-            end
+            # if we are not using quality improvements for retriangulation and termination,
+            # track displacments and movements
+            if !quality_mesh
+                if d < -geps
+                    maxdp = max(maxdp, setup.deltat*sqrt(sum(dp[i].^2)))
+                end
 
-            if d <= setup.iso
-                maxmove = max(move,maxmove)
-                continue
+                if d <= setup.iso
+                    maxmove = max(move,maxmove)
+                    continue
+                end
             end
 
             # bring points back to boundary if outside using central difference
             p[i] = p[i] .- centraldiff(fdist,p[i]).*(d+setup.iso)
-            maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
+            !quality_mesh && (maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove))
             pt_dists[i] = setup.iso # ideally
         end
 
@@ -167,8 +180,10 @@ function distmesh(fdist::Function,
 
         # save iteration stats
         if stats
-            push!(statsdata.maxmove,maxmove)
-            push!(statsdata.maxdp,maxdp)
+            if !quality_mesh
+                push!(statsdata.maxmove,maxmove)
+                push!(statsdata.maxdp,maxdp)
+            end
             triangle_qualities!(tris,triset,qualities,p,t)
             sort!(qualities) # sort for median calc and robust summation
             mine, maxe = extrema(qualities)
@@ -179,7 +194,7 @@ function distmesh(fdist::Function,
         end
 
         # Termination criterion
-        if maxdp<setup.ptol*h
+        if !quality_mesh && maxdp<setup.ptol*h
             return p, t, statsdata
         end
     end
