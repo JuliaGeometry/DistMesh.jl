@@ -89,6 +89,11 @@ function distmesh(fdist::Function,
         qualities = eltype(VertType)[]
     end
 
+    if quality_mesh
+        p_old = copy(p)
+        prev_mean_qual = typemax(eltype(VertType))
+        new_mean_qual = typemin(eltype(VertType))
+    end
     # information on each iteration
     statsdata = DistMeshStatistics()
     lcount = 0 # iteration counter
@@ -96,9 +101,16 @@ function distmesh(fdist::Function,
 
     @inbounds while true
         # if large move, retriangulation
-        if !quality_mesh && maxmove>setup.ttol*h
+        if (!quality_mesh && maxmove>setup.ttol*h) || quality_mesh && prev_mean_qual > new_mean_qual
+
+            # if we are using quality meshing we revert the points
+            # TODO: There might be places mean qual gets stuck
+            if quality_mesh
+                copyto!(p,p_old)
+            end
 
             # use hilbert sort to improve cache locality of points
+            # TODO: We can't sort if we have fixed
             if setup.sort && iszero(triangulationcount % setup.sort_interval)
                 hilbertsort!(p)
             end
@@ -115,6 +127,7 @@ function distmesh(fdist::Function,
             non_uniform && resize!(L0, length(pair))
 
             # if the points were sorted we need to update the distance cache
+            # TODO: We can't sort if we have fixed
             if setup.sort && iszero(triangulationcount % setup.sort_interval)
                 for i in eachindex(p)
                     pt_dists[i] = fdist(p[i])
@@ -139,12 +152,12 @@ function distmesh(fdist::Function,
             end
         end
 
-        # apply point forces and
-        # bring outside points back to the boundary
         if !quality_mesh
             maxdp = typemin(eltype(VertType))
             maxmove = typemin(eltype(VertType))
         end
+        # apply point forces and
+        # bring outside points back to the boundary
         for i in eachindex(p)
 
             p0 = p[i] # store original point location
