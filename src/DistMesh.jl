@@ -61,19 +61,26 @@ struct DistMeshQuality{T} <: AbstractDistMeshAlgorithm
     iso::T
     deltat::T
     minimum::T
+    sort::Bool # use hilbert sort to cache-localize points
+    sort_interval::Int # retriangulations before resorting
+    nonlinear::Bool # uses nonlinear edge force
     distribution::Symbol # intial point distribution
 end
 
 function DistMeshQuality(;iso=0,
-                        ptol=.001,
                         deltat=0.05,
-                        ttol=0.02,
+                        minimum=0.65,
+                        sort=false,
+                        sort_interval=20,
+                        nonlinear=false,
                         distribution=:regular)
-    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat), typeof(ttol))
+    T = promote_type(typeof(iso),typeof(deltat))
     DistMeshQuality{T}(iso,
                      deltat,
-                     ttol,
-                     ptol,
+                     minimum,
+                     sort,
+                     sort_interval,
+                     nonlinear,
                      distribution)
 end
 
