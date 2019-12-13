@@ -117,6 +117,7 @@ function distmesh(fdist::Function,
                     pt_dists[i] = fdist(p[i])
                 end
             end
+            triangulationcount == 0 && @show length(t)
             triangulationcount += 1
             stats && push!(statsdata.retriangulations, lcount)
         end

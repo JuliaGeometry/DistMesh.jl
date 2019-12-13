@@ -1,5 +1,5 @@
 function delaunayn(points)
-    tetio = tetrahedralize(TetGen.TetgenIO(points), "Q") # Q- Quiet
+    tetio = tetrahedralize(TetGen.TetgenIO(points), "S0JNFIQ") # Q- Quiet
     tetio
 end
 
@@ -13,7 +13,8 @@ function delaunayn!(fdist, p, t, geps, sorted_pts)
     t_d = triangulation.tetrahedra
     resize!(t, length(t_d))
     copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
-
+    @show length(t_d)
+    exit()
     # average points to get mid point of each tetrahedra
     # if the mid point of the tetrahedra is outside of
     # the boundary we remove it.
@@ -24,7 +25,7 @@ function delaunayn!(fdist, p, t, geps, sorted_pts)
     for ai in t
         t[j] = ai
         pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
-        j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
+        j = ifelse(fdist(pm) < -geps, nextind(t, j), j)
     end
     j <= lastindex(t) && resize!(t, j-1)
     nothing
