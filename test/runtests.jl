@@ -85,3 +85,15 @@ end
         @test isapprox(getproperty(s,fn), getproperty(stat_04,fn))
     end
 end
+
+@testset "dihedral metrics" begin
+    d(p) = sqrt(sum(p.^2))-1
+    p,t,_ = distmesh(d,HUniform(),0.2)
+    all_angs =  DistMesh.dihedral_angles(p,t)
+    min_angs =  DistMesh.min_dihedral_angles(p,t)
+    ax = extrema(all_angs)
+    mx = extrema(min_angs)
+    @test ax[1] == mx[1]
+    @test ax == (0.023502688273828173, 3.104396619996953)
+    @test mx == (0.023502688273828173, 1.2044902180168893)
+end
