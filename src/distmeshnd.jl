@@ -65,12 +65,12 @@ function distmesh(fdist::Function,
 
     # add points to p based on the initial distribution
     if setup.distribution === :regular
-        simplecubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
+        simplecubic!(fdist, p, pt_dists, h, geps, origin, widths, VertType)
     elseif setup.distribution === :packed
         # face-centered cubic point distribution
-        facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
+        facecenteredcubic!(fdist, p, pt_dists, h, geps, origin, widths, VertType)
     end
-
+    @show length(p)
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[]                 # edge indices (Int32 since we use Tetgen)
@@ -120,7 +120,7 @@ function distmesh(fdist::Function,
             triangulationcount += 1
             stats && push!(statsdata.retriangulations, lcount)
         end
-
+        #@show lcount, triangulationcount
         compute_displacements!(fh, dp, pair, L, L0, bars, p, setup, VertType)
 
         # Zero out forces on fix points
