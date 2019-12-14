@@ -1,5 +1,12 @@
 function delaunayn(points)
-    tetio = tetrahedralize(TetGen.TetgenIO(points), "Q") # Q- Quiet
+    # M - no merge of close facets
+    # J - no jettison of points
+    # B - No boundary info
+    # N - No node output
+    # F - No face and edge info
+    # I - No mesh iteration numbers
+    # Q - Quiet
+    tetio = tetrahedralize(TetGen.TetgenIO(points), "JBNFIQ")
     tetio
 end
 
