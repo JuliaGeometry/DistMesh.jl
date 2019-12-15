@@ -1,3 +1,5 @@
+# This file is licensed under the MIT "Expat" License.
+
 # implementing scale-free Hilbert ordering. Real all about it here:
 # http://doc.cgal.org/latest/Spatial_sorting/index.html
 
@@ -6,7 +8,7 @@
 # The GeometricalPredicates.jl package is licensed under the MIT "Expat" License:
 #    Copyright (c) 2014: Ariel Keselman.
 
-# modifications for StaticArrays: sjkelly
+# modifications for StaticArrays: sjkelly (Under terms of MIT License)
 
 const coordinatex = 1
 const coordinatey = 2
