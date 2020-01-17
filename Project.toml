@@ -7,6 +7,7 @@ version = "0.1.0"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
+Triangulate = "f7e6ffb2-c36d-4f8f-a77e-16e897189344"
 
 [compat]
 julia = ">=1.1"
