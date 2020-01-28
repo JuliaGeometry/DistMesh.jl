@@ -72,7 +72,7 @@ function distmesh(fdist::Function,
     end
 
     # initialize arrays
-    pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
+    pair_set = Set{UInt64}()        # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[]                 # edge indices (Int32 since we use Tetgen)
     dp = zeros(VertType, length(p))             # displacement at each node
     bars = VertType[]                           # the vector of each edge

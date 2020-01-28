@@ -52,17 +52,30 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
         for ep in 1:6
             p1 = t[i][tetpairs[ep][1]]
             p2 = t[i][tetpairs[ep][2]]
-            push!(pair_set, p1 > p2 ? (p2,p1) : (p1,p2))
+            push!(pair_set, p1 > p2 ? bitpack(p2,p1) : bitpack(p1,p2))
         end
     end
     resize!(pair, length(pair_set))
     # copy pair set to array since sets are not sortable
     i = 1
     for elt in pair_set
-        pair[i] = elt
+        pair[i] = unbitpack(elt)
         i = i + 1
     end
 
     # sort the edge pairs for better point lookup
     sort!(pair)
+end
+
+"""
+Pack two 32 bit numbers (or smaller) in an UInt64 to speed up hashing in dicts
+"""
+function bitpack(xi,yi)
+    (unsafe_trunc(UInt64, xi) << 32) | unsafe_trunc(UInt64, yi)
+end
+
+function unbitpack(key)
+    # we can use unsafe truncation here because the bounds
+    # are enforced in the initial masking.
+    unsafe_trunc(UInt32, key >>> 32), unsafe_trunc(UInt32, key)
 end
