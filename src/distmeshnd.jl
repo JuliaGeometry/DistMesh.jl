@@ -83,7 +83,7 @@ function distmesh(fdist::Function,
 
     # arrays for tracking quality metrics
     tris = NTuple{3,Int32}[]        # triangles used for quality checks
-    triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
+    triset = Set{UInt64}() # set for triangles to ensure uniqueness
     qualities = eltype(VertType)[]
 
     # information on each iteration

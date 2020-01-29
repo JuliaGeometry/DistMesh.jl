@@ -13,17 +13,17 @@ function tets_to_tris!(tris, triset, tets)
             p3 = tets[i][tp[3]]
             # sort indices
             if p1 <= p2 <= p3
-                push!(triset, (p1,p2,p3))
+                push!(triset, bitpack(p1,p2,p3))
             elseif p1 <= p3 <= p2
-                push!(triset, (p1,p3,p2))
+                push!(triset, bitpack(p1,p3,p2))
             elseif p2 <= p3 <= p1
-                push!(triset, (p2,p3,p1))
+                push!(triset, bitpack(p2,p3,p1))
             elseif p2 <= p1 <= p3
-                push!(triset, (p2,p1,p3))
+                push!(triset, bitpack(p2,p1,p3))
             elseif p3 <= p1 <= p2
-                push!(triset, (p3,p1,p2))
+                push!(triset, bitpack(p3,p1,p2))
             elseif p3 <= p2 <= p1
-                push!(triset, (p3,p2,p1))
+                push!(triset, bitpack(p3,p2,p1))
             end
         end
     end
@@ -31,7 +31,7 @@ function tets_to_tris!(tris, triset, tets)
     #copy elements to tri
     i = 1
     for elt in triset
-        tris[i] = elt
+        tris[i] = unbitpack3(elt)
         i = i + 1
     end
     sort!(tris)
@@ -39,7 +39,7 @@ function tets_to_tris!(tris, triset, tets)
 end
 
 function tets_to_tris!(tris::Vector, tets::Vector)
-    tets_to_tris!(tris, Set{eltype(tris)}(), tets)
+    tets_to_tris!(tris, Set{UInt64}(), tets)
 end
 
 """
@@ -59,7 +59,7 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
     # copy pair set to array since sets are not sortable
     i = 1
     for elt in pair_set
-        pair[i] = unbitpack(elt)
+        pair[i] = unbitpack2(elt)
         i = i + 1
     end
 
@@ -74,8 +74,18 @@ function bitpack(xi,yi)
     (unsafe_trunc(UInt64, xi) << 32) | unsafe_trunc(UInt64, yi)
 end
 
-function unbitpack(key)
+function bitpack(xi,yi,zi)
+    (unsafe_trunc(UInt64, xi) << 42) | (unsafe_trunc(UInt64, yi & 0x01fffff) << 21) | unsafe_trunc(UInt64, zi & 0x01fffff)
+end
+
+function unbitpack2(key)
     # we can use unsafe truncation here because the bounds
     # are enforced in the initial masking.
     unsafe_trunc(UInt32, key >>> 32), unsafe_trunc(UInt32, key)
+end
+
+function unbitpack3(key)
+    # we can use unsafe truncation here because the bounds
+    # are enforced in the initial masking.
+    unsafe_trunc(UInt32, key >>> 42), unsafe_trunc(UInt32, key >>> 21) & 0x01fffff, unsafe_trunc(UInt32, key) & 0x01fffff
 end
