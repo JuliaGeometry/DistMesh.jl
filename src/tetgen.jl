@@ -11,7 +11,7 @@ function delaunayn(points)
 end
 
 function delaunayn_nosort(points)
-    tetio = tetrahedralize(TetGen.TetgenIO(points), "Qb/1") # Q- Quiet
+    tetio = tetrahedralize(TetGen.TetgenIO(points), "JBNFIQb/1") # Q- Quiet
     tetio
 end
 

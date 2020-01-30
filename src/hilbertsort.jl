@@ -135,3 +135,21 @@ end
 #hilbertsort!(a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, lo, hi, lim)
 hilbertsort!(a::Vector) = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a))
 hilbertsort!(a::Vector, lo::Int64, hi::Int64, lim::Int64) = hilbertsort!(backward, backward, backward, coordinatey, a, lo, hi, lim)
+
+function _mssort!(a::Array, lim_ms::Int64, lim_hl::Int64, rat::Float64)
+    hi = length(a)
+    lo = 1
+    while true
+        lo = hi - round(Int, (1-rat)*hi)
+        hi-lo <= lim_ms && return a
+        hilbertsort!(a, lo, hi, lim_hl)
+        hi = lo-1
+    end
+    return a
+end
+
+# Utility methods, setting some different defaults for 2D and 3D. These are exported
+#mssort!(a::Array{T,1}; lim_ms::Int64=16, lim_hl::Int64=4, rat::Float64=0.25) where {T<:AbstractPoint2D} =
+#    _mssort!(a, lim_ms, lim_hl, rat)
+mssort!(a::Array; lim_ms::Int64=64, lim_hl::Int64=8, rat::Float64=0.125) =
+    _mssort!(a, lim_ms, lim_hl, rat)

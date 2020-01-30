@@ -95,9 +95,9 @@ function distmesh(fdist::Function,
         # if large move, retriangulation
         if maxmove>setup.ttol*h
 
-            # use hilbert sort to improve cache locality of points
+            # use multi-scale hilbert sort to improve cache locality of points
             if setup.sort && iszero(triangulationcount % setup.sort_interval)
-                hilbertsort!(p)
+                mssort!(p)
             end
 
             # compute a new delaunay triangulation
