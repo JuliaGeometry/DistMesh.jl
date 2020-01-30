@@ -9,98 +9,89 @@
 #    Copyright (c) 2014: Ariel Keselman.
 
 # modifications for StaticArrays: sjkelly (Under terms of MIT License)
+# implementing scale-free Hilbert ordering. Real all about it here:
+# http://doc.cgal.org/latest/Spatial_sorting/index.html
 
-const coordinatex = 1
-const coordinatey = 2
-const coordinatez = 3
-next2d(c) = c % 2 + 1
-next3d(c) = c % 3 + 1
-nextnext3d(c) = (c + 1) % 3 + 1
+abstract type AbstractCoordinate end
+mutable struct CoordinateX <: AbstractCoordinate end
+mutable struct CoordinateY <: AbstractCoordinate end
+mutable struct CoordinateZ <: AbstractCoordinate end
+const coordinatex = CoordinateX()
+const coordinatey = CoordinateY()
+const coordinatez = CoordinateZ()
+next2d(::CoordinateX) = coordinatey
+next2d(::CoordinateY) = coordinatex
+next3d(::CoordinateX) = coordinatey
+next3d(::CoordinateY) = coordinatez
+next3d(::CoordinateZ) = coordinatex
+nextnext3d(::CoordinateX) = coordinatez
+nextnext3d(::CoordinateY) = coordinatex
+nextnext3d(::CoordinateZ) = coordinatey
 
-const forward = true
-const backward = false
+abstract type AbstractDirection end
+mutable struct Forward <: AbstractDirection end
+mutable struct Backward <: AbstractDirection end
+const forward = Forward()
+const backward = Backward()
+Base.:!(::Forward) = backward
+Base.:!(::Backward) = forward
 
-function select!(direction, coord, v::Array{T,1}, k::Integer, lo::Integer, hi::Integer) where T<:AbstractVector
-    #lo <= k <= hi || error("select index $k is out of range $lo:$hi")
-    if direction == forward
-        @inbounds while lo < hi
-            if isone(hi-lo)
-                if v[hi][coord] < v[lo][coord]
-                    v[lo], v[hi] = v[hi], v[lo]
-                end
-                return #v[k]
+compare(::Forward, ::CoordinateX, p1::AbstractVector, p2::AbstractVector) = p1[1] < p2[1]
+compare(::Backward, ::CoordinateX, p1::AbstractVector, p2::AbstractVector) = p1[1] > p2[1]
+compare(::Forward, ::CoordinateY, p1::AbstractVector, p2::AbstractVector) = p1[2] < p2[2]
+compare(::Backward, ::CoordinateY, p1::AbstractVector, p2::AbstractVector) = p1[2] > p2[2]
+compare(::Forward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] < p2[3]
+compare(::Backward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] > p2[3]
+
+function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v::Array{T,1}, k::Int, lo::Int, hi::Int) where T<:AbstractVector
+    lo <= k <= hi || error("select index $k is out of range $lo:$hi")
+    @inbounds while lo < hi
+        if hi-lo == 1
+            if compare(direction, coordinate, v[hi], v[lo])
+                v[lo], v[hi] = v[hi], v[lo]
             end
-            pivot = v[(lo+hi)>>>1]
-            i, j = lo, hi
-            while true
-                pivot_elt = pivot[coord]
-                while v[i][coord] < pivot_elt; i += 1; end
-                while pivot_elt < v[j][coord]; j -= 1; end
-                i <= j || break
-                v[i], v[j] = v[j], v[i]
-                i += 1; j -= 1
-            end
-            if k <= j
-                hi = j
-            elseif i <= k
-                lo = i
-            else
-                return #pivot
-            end
+            return v[k]
         end
-    else
-        @inbounds while lo < hi
-            if isone(hi-lo)
-                if v[hi][coord] > v[lo][coord]
-                    v[lo], v[hi] = v[hi], v[lo]
-                end
-                return #v[k]
-            end
-            pivot = v[(lo+hi)>>>1]
-            i, j = lo, hi
-            while true
-                pivot_elt = pivot[coord]
-                while v[i][coord] > pivot_elt; i += 1; end
-                while pivot_elt > v[j][coord]; j -= 1; end
-                i <= j || break
-                v[i], v[j] = v[j], v[i]
-                i += 1; j -= 1
-            end
-            if k <= j
-                hi = j
-            elseif i <= k
-                lo = i
-            else
-                return #pivot
-            end
+        pivot = v[(lo+hi)>>>1]
+        i, j = lo, hi
+        while true
+            while compare(direction, coordinate, v[i], pivot); i += 1; end
+            while compare(direction, coordinate, pivot, v[j]); j -= 1; end
+            i <= j || break
+            v[i], v[j] = v[j], v[i]
+            i += 1; j -= 1
+        end
+        if k <= j
+            hi = j
+        elseif i <= k
+            lo = i
+        else
+            return pivot
         end
     end
-    #return v[lo]
-    nothing
+    return v[lo]
 end
 
+function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, coordinate::AbstractCoordinate, a::Array{Point{2,T}}, lo::Int64, hi::Int64, lim::Int64=4) where T<:Number
+    hi-lo <= lim && return a
 
-# 2D version
-# function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, coordinate::AbstractCoordinate, a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64=4) where T<:AbstractPoint2D
-#     hi-lo <= lim && return a
+    i2 = (lo+hi)>>>1
+    i1 = (lo+i2)>>>1
+    i3 = (i2+hi)>>>1
 
-#     i2 = (lo+hi)>>>1
-#     i1 = (lo+i2)>>>1
-#     i3 = (i2+hi)>>>1
+    select!(directionx, coordinate, a, i2, lo, hi)
+    select!(directiony, next2d(coordinate), a, i1, lo, i2)
+    select!(!directiony, next2d(coordinate), a, i3, i2, hi)
 
-#     select!(directionx, coordinate, a, i2, lo, hi)
-#     select!(directiony, next2d(coordinate), a, i1, lo, i2)
-#     select!(!directiony, next2d(coordinate), a, i3, i2, hi)
+    hilbertsort!(directiony, directionx, next2d(coordinate), a, lo, i1, lim)
+    hilbertsort!(directionx, directiony, coordinate, a, i1, i2, lim)
+    hilbertsort!(directionx, directiony, coordinate, a, i2, i3, lim)
+    hilbertsort!(!directiony, !directionx, next2d(coordinate), a, i3, hi, lim)
 
-#     hilbertsort!(directiony, directionx, next2d(coordinate), a, lo, i1, lim)
-#     hilbertsort!(directionx, directiony, coordinate, a, i1, i2, lim)
-#     hilbertsort!(directionx, directiony, coordinate, a, i2, i3, lim)
-#     hilbertsort!(!directiony, !directionx, next2d(coordinate), a, i3, hi, lim)
+    return a
+end
 
-#     return a
-# end
-
-function hilbertsort!(directionx, directiony, directionz, coordinate, a::Vector, lo::Integer, hi::Integer, lim::Integer=8)
+function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, directionz::AbstractDirection, coordinate::AbstractCoordinate, a::Vector{Point{3,T}}, lo::Int64, hi::Int64, lim::Int64=8) where T<:Number
     hi-lo <= lim && return a
 
     i4 = (lo+hi)>>>1
@@ -131,12 +122,14 @@ function hilbertsort!(directionx, directiony, directionz, coordinate, a::Vector,
     return a
 end
 
-#hilbertsort!(a::Array{T,1}) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, 1, length(a))
-#hilbertsort!(a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, lo, hi, lim)
-hilbertsort!(a::Vector) = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a))
-hilbertsort!(a::Vector, lo::Int64, hi::Int64, lim::Int64) = hilbertsort!(backward, backward, backward, coordinatey, a, lo, hi, lim)
+hilbertsort!(a::Vector{Point{2,T}}) where {T<:Number} = hilbertsort!(backward, backward, coordinatey, a, 1, length(a))
+hilbertsort!(a::Vector{Point{2,T}}, lo::Int64, hi::Int64, lim::Int64) where {T<:Number} = hilbertsort!(backward, backward, coordinatey, a, lo, hi, lim)
+hilbertsort!(a::Vector{Point{3,T}}) where {T<:Number} = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a))
+hilbertsort!(a::Vector{Point{3,T}}, lo::Int64, hi::Int64, lim::Int64) where {T<:Number} = hilbertsort!(backward, backward, backward, coordinatey, a, lo, hi, lim)
 
-function _mssort!(a::Array, lim_ms::Int64, lim_hl::Int64, rat::Float64)
+# multi-scale sort. Read all about it here:
+# http://doc.cgal.org/latest/Spatial_sorting/classCGAL_1_1Multiscale__sort.html
+function _mssort!(a::Array{T,1}, lim_ms::Int64, lim_hl::Int64, rat::Float64) where T<:AbstractVector
     hi = length(a)
     lo = 1
     while true
@@ -149,7 +142,8 @@ function _mssort!(a::Array, lim_ms::Int64, lim_hl::Int64, rat::Float64)
 end
 
 # Utility methods, setting some different defaults for 2D and 3D. These are exported
-#mssort!(a::Array{T,1}; lim_ms::Int64=16, lim_hl::Int64=4, rat::Float64=0.25) where {T<:AbstractPoint2D} =
-#    _mssort!(a, lim_ms, lim_hl, rat)
-mssort!(a::Array; lim_ms::Int64=64, lim_hl::Int64=8, rat::Float64=0.125) =
+# 2D Case
+mssort!(a::Vector{Point{2,T}}; lim_ms::Int64=16, lim_hl::Int64=4, rat::Float64=0.25) where {T<:Number} =
+    _mssort!(a, lim_ms, lim_hl, rat)
+mssort!(a::Vector{Point{3,T}}; lim_ms::Int64=64, lim_hl::Int64=8, rat::Float64=0.125) where {T<:Number} =
     _mssort!(a, lim_ms, lim_hl, rat)
