@@ -34,7 +34,7 @@ function tets_to_tris!(tris, triset, tets)
         tris[i] = elt
         i = i + 1
     end
-    sort!(tris)
+    mssort!(tris)
     tris
 end
 

@@ -135,7 +135,7 @@ hilbertsort!(a::Vector{Point{3,T}}, lo::Int64, hi::Int64, lim::Int64) where {T<:
 
 # multi-scale sort. Read all about it here:
 # http://doc.cgal.org/latest/Spatial_sorting/classCGAL_1_1Multiscale__sort.html
-function _mssort!(a::Array{T,1}, lim_ms::Int64, lim_hl::Int64, rat::Float64) where T<:AbstractVector
+function _mssort!(a::AbstractVector, lim_ms::Int, lim_hl::Int, rat::Float64)
     hi = length(a)
     lo = 1
     while true
@@ -149,7 +149,11 @@ end
 
 # Utility methods, setting some different defaults for 2D and 3D. These are exported
 # 2D Case
-mssort!(a::Vector{Point{2,T}}; lim_ms::Int64=16, lim_hl::Int64=4, rat::Float64=0.25) where {T<:Number} =
+function mssort!(a::Vector{T}; lim_ms::Int=16, lim_hl::Int=4,
+                 rat::Float64=0.25) where T<:Union{Point{2,<:Number},NTuple{2,<:Number}}
     _mssort!(a, lim_ms, lim_hl, rat)
-mssort!(a::Vector{Point{3,T}}; lim_ms::Int64=64, lim_hl::Int64=8, rat::Float64=0.125) where {T<:Number} =
+end
+function mssort!(a::Vector{T}; lim_ms::Int=64, lim_hl::Int=8,
+                 rat::Float64=0.125) where T<:Union{Point{3,<:Number},NTuple{3,<:Number}}
     _mssort!(a, lim_ms, lim_hl, rat)
+end
