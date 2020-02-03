@@ -43,7 +43,7 @@ compare(::Backward, ::CoordinateY, p1::AbstractVector, p2::AbstractVector) = p1[
 compare(::Forward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] < p2[3]
 compare(::Backward, ::CoordinateZ, p1::AbstractVector, p2::AbstractVector) = p1[3] > p2[3]
 
-function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v::Array{T,1}, k::Int, lo::Int, hi::Int) where T<:AbstractVector
+function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v, k::Int, lo::Int, hi::Int)
     lo <= k <= hi || error("select index $k is out of range $lo:$hi")
     @inbounds while lo < hi
         if hi-lo == 1
@@ -72,7 +72,10 @@ function select!(direction::AbstractDirection, coordinate::AbstractCoordinate, v
     return v[lo]
 end
 
-function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, coordinate::AbstractCoordinate, a::Array{Point{2,T}}, lo::Int64, hi::Int64, lim::Int64=4) where T<:Number
+function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection,
+                      coordinate::AbstractCoordinate, a::Vector{T}, lo::Int, hi::Int,
+                      lim::Int=4
+                     ) where T<:Union{Point{2,<:Number},NTuple{2,<:Number}}
     hi-lo <= lim && return a
 
     i2 = (lo+hi)>>>1
@@ -91,7 +94,10 @@ function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirecti
     return a
 end
 
-function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection, directionz::AbstractDirection, coordinate::AbstractCoordinate, a::Vector{Point{3,T}}, lo::Int64, hi::Int64, lim::Int64=8) where T<:Number
+function hilbertsort!(directionx::AbstractDirection, directiony::AbstractDirection,
+                      directionz::AbstractDirection, coordinate::AbstractCoordinate,
+                      a::Vector{T}, lo::Int, hi::Int, lim::Int=8
+                     ) where T<:Union{Point{3,<:Number},NTuple{3,<:Number}}
     hi-lo <= lim && return a
 
     i4 = (lo+hi)>>>1
