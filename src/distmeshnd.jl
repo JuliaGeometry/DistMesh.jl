@@ -79,7 +79,9 @@ function distmesh(fdist::Function,
     end
 
     # Result struct for holding points, simplices, and iteration statistics
-    result = DistMeshResult(p, GeometryBasics.SimplexFace{4,Int32}[], DistMeshStatistics())
+    result = DistMeshResult(p,
+                            GeometryBasics.SimplexFace{4,Int32}[],
+                            stats ? DistMeshStatistics() : nothing)
 
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
@@ -103,14 +105,8 @@ function distmesh(fdist::Function,
         # if large move, retriangulation
         if maxmove>setup.ttol*h
 
-            # use hilbert sort to improve cache locality of points
-            if setup.sort && iszero(triangulationcount % setup.sort_interval)
-                hilbertsort!(p)
-            end
-
             # compute a new delaunay triangulation
-            # we use the default random insertion method
-            delaunayn!(fdist, result, geps, false)
+            retriangulate!(fdist, result, geps, setup, triangulationcount)
 
             tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
 
@@ -191,4 +187,33 @@ function distmesh(fdist::Function,
             return result
         end
     end
+end
+
+function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulationcount)
+    # use hilbert sort to improve cache locality of points
+    if setup.sort && iszero(triangulationcount % setup.sort_interval)
+        hilbertsort!(result.points)
+    end
+
+    t = result.tetrahedra
+    p = result.points
+    triangulation = delaunayn(p)
+    t_d = triangulation.tetrahedra
+    resize!(t, length(t_d))
+    copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
+
+    # average points to get mid point of each tetrahedra
+    # if the mid point of the tetrahedra is outside of
+    # the boundary we remove it.
+    # TODO: this is an inlined filter call. Would be good to revert
+    # TODO: can we use the point distance array to pass boundary points to
+    #        tetgen so this call is no longer required?
+    j = firstindex(t)
+    for ai in t
+        t[j] = ai
+        pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
+        j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
+    end
+    j <= lastindex(t) && resize!(t, j-1)
+    nothing
 end
