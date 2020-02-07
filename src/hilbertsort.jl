@@ -20,13 +20,14 @@ nextnext3d(c) = (c + 1) % 3 + 1
 const forward = true
 const backward = false
 
-function select!(direction, coord, v::Array{T,1}, k::Integer, lo::Integer, hi::Integer) where T<:AbstractVector
+function select!(direction, coord, v::Array{T,1}, k::Integer, lo::Integer, hi::Integer, carry::CT) where {T<:AbstractVector, CT}
     #lo <= k <= hi || error("select index $k is out of range $lo:$hi")
     if direction == forward
         @inbounds while lo < hi
             if isone(hi-lo)
                 if v[hi][coord] < v[lo][coord]
                     v[lo], v[hi] = v[hi], v[lo]
+                    if CT !== Nothing; carry[lo], carry[hi] = carry[hi], carry[lo]; end
                 end
                 return #v[k]
             end
@@ -38,6 +39,7 @@ function select!(direction, coord, v::Array{T,1}, k::Integer, lo::Integer, hi::I
                 while pivot_elt < v[j][coord]; j -= 1; end
                 i <= j || break
                 v[i], v[j] = v[j], v[i]
+                if CT !== Nothing; carry[i], carry[j] = carry[j], carry[i]; end
                 i += 1; j -= 1
             end
             if k <= j
@@ -53,6 +55,7 @@ function select!(direction, coord, v::Array{T,1}, k::Integer, lo::Integer, hi::I
             if isone(hi-lo)
                 if v[hi][coord] > v[lo][coord]
                     v[lo], v[hi] = v[hi], v[lo]
+                    if CT !== Nothing; carry[lo], carry[hi] = carry[hi], carry[lo]; end
                 end
                 return #v[k]
             end
@@ -64,6 +67,7 @@ function select!(direction, coord, v::Array{T,1}, k::Integer, lo::Integer, hi::I
                 while pivot_elt > v[j][coord]; j -= 1; end
                 i <= j || break
                 v[i], v[j] = v[j], v[i]
+                if CT !== Nothing; carry[i], carry[j] = carry[j], carry[i]; end
                 i += 1; j -= 1
             end
             if k <= j
@@ -100,7 +104,7 @@ end
 #     return a
 # end
 
-function hilbertsort!(directionx, directiony, directionz, coordinate, a::Vector, lo::Integer, hi::Integer, lim::Integer=8)
+function hilbertsort!(directionx, directiony, directionz, coordinate, a::Vector, lo::Integer, hi::Integer, lim::Integer, carry)
     hi-lo <= lim && return a
 
     i4 = (lo+hi)>>>1
@@ -111,27 +115,27 @@ function hilbertsort!(directionx, directiony, directionz, coordinate, a::Vector,
     i5 = (i4+i6)>>>1
     i7 = (i6+hi)>>>1
 
-    select!(directionx, coordinate, a, i4, lo, hi)
-    select!(directiony, next3d(coordinate), a, i2, lo, i4)
-    select!(directionz, nextnext3d(coordinate), a, i1, lo, i2)
-    select!(!directionz, nextnext3d(coordinate), a, i3, i2, i4)
-    select!(!directiony, next3d(coordinate), a, i6, i4, hi)
-    select!(directionz, nextnext3d(coordinate), a, i5, i4, i6)
-    select!(!directionz, nextnext3d(coordinate), a, i7, i6, hi)
+    select!(directionx, coordinate, a, i4, lo, hi, carry)
+    select!(directiony, next3d(coordinate), a, i2, lo, i4, carry)
+    select!(directionz, nextnext3d(coordinate), a, i1, lo, i2, carry)
+    select!(!directionz, nextnext3d(coordinate), a, i3, i2, i4, carry)
+    select!(!directiony, next3d(coordinate), a, i6, i4, hi, carry)
+    select!(directionz, nextnext3d(coordinate), a, i5, i4, i6, carry)
+    select!(!directionz, nextnext3d(coordinate), a, i7, i6, hi, carry)
 
-    hilbertsort!( directionz,  directionx,  directiony, nextnext3d(coordinate), a, lo, i1, lim)
-    hilbertsort!( directiony,  directionz,  directionx, next3d(coordinate),     a, i1, i2, lim)
-    hilbertsort!( directiony,  directionz,  directionx, next3d(coordinate),     a, i2, i3, lim)
-    hilbertsort!( directionx, !directiony, !directionz, coordinate,             a, i3, i4, lim)
-    hilbertsort!( directionx, !directiony, !directionz, coordinate,             a, i4, i5, lim)
-    hilbertsort!(!directiony,  directionz, !directionx, next3d(coordinate),     a, i5, i6, lim)
-    hilbertsort!(!directiony,  directionz, !directionx, next3d(coordinate),     a, i6, i7, lim)
-    hilbertsort!(!directionz, !directionx,  directiony, nextnext3d(coordinate), a, i7, hi, lim)
+    hilbertsort!( directionz,  directionx,  directiony, nextnext3d(coordinate), a, lo, i1, lim, carry)
+    hilbertsort!( directiony,  directionz,  directionx, next3d(coordinate),     a, i1, i2, lim, carry)
+    hilbertsort!( directiony,  directionz,  directionx, next3d(coordinate),     a, i2, i3, lim, carry)
+    hilbertsort!( directionx, !directiony, !directionz, coordinate,             a, i3, i4, lim, carry)
+    hilbertsort!( directionx, !directiony, !directionz, coordinate,             a, i4, i5, lim, carry)
+    hilbertsort!(!directiony,  directionz, !directionx, next3d(coordinate),     a, i5, i6, lim, carry)
+    hilbertsort!(!directiony,  directionz, !directionx, next3d(coordinate),     a, i6, i7, lim, carry)
+    hilbertsort!(!directionz, !directionx,  directiony, nextnext3d(coordinate), a, i7, hi, lim, carry)
 
     return a
 end
 
 #hilbertsort!(a::Array{T,1}) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, 1, length(a))
 #hilbertsort!(a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, lo, hi, lim)
-hilbertsort!(a::Vector) = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a))
+hilbertsort!(a::Vector, carry=nothing) = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a), 8, carry)
 hilbertsort!(a::Vector, lo::Int64, hi::Int64, lim::Int64) = hilbertsort!(backward, backward, backward, coordinatey, a, lo, hi, lim)

@@ -106,7 +106,7 @@ function distmesh(fdist::Function,
         if maxmove>setup.ttol*h
 
             # compute a new delaunay triangulation
-            retriangulate!(fdist, result, geps, setup, triangulationcount)
+            retriangulate!(fdist, result, geps, setup, triangulationcount, pt_dists)
 
             tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
 
@@ -115,12 +115,6 @@ function distmesh(fdist::Function,
             resize!(L, length(pair))
             non_uniform && resize!(L0, length(pair))
 
-            # if the points were sorted we need to update the distance cache
-            if setup.sort && iszero(triangulationcount % setup.sort_interval)
-                for i in eachindex(p)
-                    pt_dists[i] = fdist(result.points[i])
-                end
-            end
             triangulationcount += 1
             stats && push!(result.stats.retriangulations, lcount)
         end
@@ -189,10 +183,10 @@ function distmesh(fdist::Function,
     end
 end
 
-function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulationcount)
+function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulationcount, pt_dists)
     # use hilbert sort to improve cache locality of points
     if setup.sort && iszero(triangulationcount % setup.sort_interval)
-        hilbertsort!(result.points)
+        hilbertsort!(result.points, pt_dists)
     end
 
     t = result.tetrahedra
