@@ -15,7 +15,9 @@ function delaunayn_nosort(points)
     tetio
 end
 
-function delaunayn!(fdist, p, t, geps, sorted_pts)
+function delaunayn!(fdist, result::DistMeshResult, geps, sorted_pts)
+    t = result.tetrahedra
+    p = result.points
     triangulation = sorted_pts ? delaunayn_nosort(p) : delaunayn(p)
     t_d = triangulation.tetrahedra
     resize!(t, length(t_d))
