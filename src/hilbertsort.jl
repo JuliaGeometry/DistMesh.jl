@@ -137,5 +137,9 @@ end
 
 #hilbertsort!(a::Array{T,1}) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, 1, length(a))
 #hilbertsort!(a::Array{T,1}, lo::Int64, hi::Int64, lim::Int64) where {T<:AbstractPoint2D} = hilbertsort!(backward, backward, coordinatey, a, lo, hi, lim)
+"""
+Hilbert Sorting. If `carry` is specified, this array will be permuted in line with the
+specified array.
+"""
 hilbertsort!(a::Vector, carry=nothing) = hilbertsort!(backward, backward, backward, coordinatez, a, 1, length(a), 8, carry)
 hilbertsort!(a::Vector, lo::Int64, hi::Int64, lim::Int64) = hilbertsort!(backward, backward, backward, coordinatey, a, lo, hi, lim)

@@ -35,7 +35,12 @@ function distmesh(fdist::Function,
     distmesh(fdist, fh, h, setup, o, w, fp, Val(stats), VT)
 end
 
+"""
+    DistMeshResult
 
+A struct returned from the `distmesh` function that includes point, simplex,
+and interation statistics.
+"""
 struct DistMeshResult{PT, TT, STATS}
     points::Vector{PT}
     tetrahedra::Vector{TT}
@@ -183,6 +188,16 @@ function distmesh(fdist::Function,
     end
 end
 
+"""
+    retriangulate!
+
+
+Given a point set, generate a delaunay triangulation, and other requirements.
+This includes:
+    - Spatial sorting of points
+    - Delaunay triangulation
+    - Filtering of invalid tetrahedra outside the boundary
+"""
 function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulationcount, pt_dists)
     # use hilbert sort to improve cache locality of points
     if setup.sort && iszero(triangulationcount % setup.sort_interval)
