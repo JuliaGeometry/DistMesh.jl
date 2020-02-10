@@ -85,3 +85,34 @@ function min_dihedral_angles(p,t)
     end
     a
 end
+
+"""
+    Computes the volume and edge-length ratio from four given points
+"""
+function volume_edge_ratio(a,b,c,d)
+    t = a - d
+    u = b - d
+    v = c - d
+    volume = dot(t,cross(u,v))/6
+    edges = (t,u,v,a-b,b-c,a-c)
+    lengths = norm.(edges)
+    l_rms = sqrt(sum(lengths.^2)/6)
+    return 6*volume/(sqrt(2)*l_rms^3)
+end
+
+"""
+
+update a pre-allocated array with tetrahedra qualities
+"""
+function volume_edge_ratio(points::Vector{T},tets) where {T}
+    n = length(tets)
+    min_q = typemax(eltype(T))
+    max_q = typemin(eltype(T))
+    for i = 1:n
+        tet = tets[i]
+        q = volume_edge_ratio(points[tet[1]],points[tet[2]],points[tet[3]],points[tet[4]])
+        min_q = min(q,min_q)
+        max_q = max(q,max_q)
+    end
+    min_q, max_q
+end
