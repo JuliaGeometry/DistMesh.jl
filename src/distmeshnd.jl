@@ -35,6 +35,18 @@ function distmesh(fdist::Function,
     distmesh(fdist, fh, h, setup, o, w, fp, Val(stats), VT)
 end
 
+"""
+    DistMeshResult
+
+A struct returned from the `distmesh` function that includes point, simplex,
+and interation statistics.
+"""
+struct DistMeshResult{PT, TT, STATS}
+    points::Vector{PT}
+    tetrahedra::Vector{TT}
+    stats::STATS
+end
+
 function distmesh(fdist::Function,
                   fh,
                   h::Number,
@@ -71,6 +83,11 @@ function distmesh(fdist::Function,
         facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
     end
 
+    # Result struct for holding points, simplices, and iteration statistics
+    result = DistMeshResult(p,
+                            GeometryBasics.SimplexFace{4,Int32}[],
+                            stats ? DistMeshStatistics() : nothing)
+
     # initialize arrays
     pair_set = Set{Tuple{Int32,Int32}}()        # set used for ensure we have a unique set of edges
     pair = Tuple{Int32,Int32}[]                 # edge indices (Int32 since we use Tetgen)
@@ -78,7 +95,6 @@ function distmesh(fdist::Function,
     bars = VertType[]                           # the vector of each edge
     L = eltype(VertType)[]                      # vector length of each edge
     L0 = non_uniform ? eltype(VertType)[] : nothing # desired edge length computed by dh (edge length function)
-    t = GeometryBasics.SimplexFace{4,Int32}[]   # tetrahedra indices from delaunay triangulation
     maxmove = typemax(eltype(VertType))         # stores an iteration max movement for retriangulation
 
     # arrays for tracking quality metrics
@@ -87,7 +103,6 @@ function distmesh(fdist::Function,
     qualities = eltype(VertType)[]
 
     # information on each iteration
-    statsdata = DistMeshStatistics()
     lcount = 0 # iteration counter
     triangulationcount = 0 # triangulation counter
 
@@ -95,33 +110,21 @@ function distmesh(fdist::Function,
         # if large move, retriangulation
         if maxmove>setup.ttol*h
 
-            # use hilbert sort to improve cache locality of points
-            if setup.sort && iszero(triangulationcount % setup.sort_interval)
-                hilbertsort!(p)
-            end
-
             # compute a new delaunay triangulation
-            # we use the default random insertion method
-            delaunayn!(fdist, p, t, geps, false)
+            retriangulate!(fdist, result, geps, setup, triangulationcount, pt_dists)
 
-            tet_to_edges!(pair, pair_set, t) # Describe each edge by a unique pair of nodes
+            tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
 
             # resize arrays for new pair counts
             resize!(bars, length(pair))
             resize!(L, length(pair))
             non_uniform && resize!(L0, length(pair))
 
-            # if the points were sorted we need to update the distance cache
-            if setup.sort && iszero(triangulationcount % setup.sort_interval)
-                for i in eachindex(p)
-                    pt_dists[i] = fdist(p[i])
-                end
-            end
             triangulationcount += 1
-            stats && push!(statsdata.retriangulations, lcount)
+            stats && push!(result.stats.retriangulations, lcount)
         end
 
-        compute_displacements!(fh, dp, pair, L, L0, bars, p, setup, VertType)
+        compute_displacements!(fh, dp, pair, L, L0, bars, result.points, setup, VertType)
 
         # Zero out forces on fix points
         if have_fixed
@@ -144,7 +147,7 @@ function distmesh(fdist::Function,
             # complex distance functions and large node counts
             move = sqrt(sum((p[i]-p0).^2))          # compute movement from the displacement
             d_est = pt_dists[i] + move              # apply the movement to our cache point
-            d = d_est < -geps ? d_est : fdist(p[i]) # determine if we need correct or approximate distance
+            d = d_est < -geps ? d_est : fdist(result.points[i]) # determine if we need correct or approximate distance
             pt_dists[i] = d                         # store distance
 
             if d < -geps
@@ -167,20 +170,59 @@ function distmesh(fdist::Function,
 
         # save iteration stats
         if stats
-            push!(statsdata.maxmove,maxmove)
-            push!(statsdata.maxdp,maxdp)
-            triangle_qualities!(tris,triset,qualities,p,t)
+            push!(result.stats.maxmove,maxmove)
+            push!(result.stats.maxdp,maxdp)
+            triangle_qualities!(tris,triset,qualities,result.points,result.tetrahedra)
             sort!(qualities) # sort for median calc and robust summation
             mine, maxe = extrema(qualities)
-            push!(statsdata.average_qual, sum(qualities)/length(qualities))
-            push!(statsdata.median_qual, qualities[round(Int,length(qualities)/2)])
-            push!(statsdata.minimum_qual, mine)
-            push!(statsdata.maximum_qual, maxe)
+            push!(result.stats.average_qual, sum(qualities)/length(qualities))
+            push!(result.stats.median_qual, qualities[round(Int,length(qualities)/2)])
+            push!(result.stats.minimum_qual, mine)
+            push!(result.stats.maximum_qual, maxe)
         end
 
         # Termination criterion
         if maxdp<setup.ptol*h
-            return p, t, statsdata
+            return result
         end
     end
+end
+
+"""
+    retriangulate!
+
+
+Given a point set, generate a delaunay triangulation, and other requirements.
+This includes:
+    - Spatial sorting of points
+    - Delaunay triangulation
+    - Filtering of invalid tetrahedra outside the boundary
+"""
+function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulationcount, pt_dists)
+    # use hilbert sort to improve cache locality of points
+    if setup.sort && iszero(triangulationcount % setup.sort_interval)
+        hilbertsort!(result.points, pt_dists)
+    end
+
+    t = result.tetrahedra
+    p = result.points
+    triangulation = delaunayn(p)
+    t_d = triangulation.tetrahedra
+    resize!(t, length(t_d))
+    copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
+
+    # average points to get mid point of each tetrahedra
+    # if the mid point of the tetrahedra is outside of
+    # the boundary we remove it.
+    # TODO: this is an inlined filter call. Would be good to revert
+    # TODO: can we use the point distance array to pass boundary points to
+    #        tetgen so this call is no longer required?
+    j = firstindex(t)
+    for ai in t
+        t[j] = ai
+        pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
+        j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
+    end
+    j <= lastindex(t) && resize!(t, j-1)
+    nothing
 end
