@@ -95,20 +95,20 @@ function volume_edge_ratio(a,b,c,d)
     v = c .- d
     volume = t[1]*(u[2]*v[3]-v[2]*u[3])-u[1]*(t[2]*v[3]-v[2]*t[3])+v[1]*(t[2]*u[3]-u[2]*t[3])
     edges = (t,u,v,a.-b,b.-c,a.-c)
-    lengths = norm.(edges)
-    l_rms = sqrt(sum(lengths.^2)/6)
-    return volume/(sqrt(2)*l_rms^3)
+    lengths = dot.(edges,edges)
+    l_rms = sqrt(sum(lengths)/6)
+    return sqrt(2)*volume/(l_rms^3)
 end
 
 """
 
 update a pre-allocated array with tetrahedra qualities
 """
-function volume_edge_ratio(points::Vector{T},tets) where {T}
+function volume_edge_extrema(points::Vector{T},tets) where {T}
     n = length(tets)
     min_q = typemax(eltype(T))
     max_q = typemin(eltype(T))
-    for i = 1:n
+    @inbounds for i = 1:n
         tet = tets[i]
         q = volume_edge_ratio(points[tet[1]],points[tet[2]],points[tet[3]],points[tet[4]])
         min_q = min(q,min_q)
