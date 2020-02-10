@@ -90,14 +90,14 @@ end
     Computes the volume and edge-length ratio from four given points
 """
 function volume_edge_ratio(a,b,c,d)
-    t = a - d
-    u = b - d
-    v = c - d
-    volume = dot(t,cross(u,v))/6
-    edges = (t,u,v,a-b,b-c,a-c)
+    t = a .- d
+    u = b .- d
+    v = c .- d
+    volume = t[1]*(u[2]*v[3]-v[2]*u[3])-u[1]*(t[2]*v[3]-v[2]*t[3])+v[1]*(t[2]*u[3]-u[2]*t[3])
+    edges = (t,u,v,a.-b,b.-c,a.-c)
     lengths = norm.(edges)
     l_rms = sqrt(sum(lengths.^2)/6)
-    return 6*volume/(sqrt(2)*l_rms^3)
+    return volume/(sqrt(2)*l_rms^3)
 end
 
 """

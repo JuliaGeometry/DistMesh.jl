@@ -41,9 +41,15 @@ end
     end
     @testset "volume-length" begin
         pts = ([1,0,-1/sqrt(2)], [-1,0,-1/sqrt(2)], [0,1,1/sqrt(2)], [0,-1,1/sqrt(2)])
+        pts2 = ([1,1,1], [1,-1,-1], [-1,1,-1], [-1,-1,1])
+        pts_degenerate = ([1,1,1], [1,1,1], [-1,1,-1], [-1,-1,1])
         @show DistMesh.volume_edge_ratio(pts...)
         @show DistMesh.volume_edge_ratio((pts.*2)...)
-
+        @show DistMesh.volume_edge_ratio((pts.*1e-6)...) ≈ 0.5
+        @test isnan(DistMesh.volume_edge_ratio((pts.*0)...))
+        @show DistMesh.volume_edge_ratio(pts2...)
+        @show DistMesh.volume_edge_ratio((pts2.*2)...)
+        @test DistMesh.volume_edge_ratio(pts_degenerate...) == 0
 
     end
 end
