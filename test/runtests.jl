@@ -93,9 +93,9 @@ end
     result = distmesh(d,HUniform(),0.4, stats=true)
     @test length(result.points) == 56
     @test length(result.tetrahedra) == 186
-    for fn in fieldnames(typeof(result.stats))
-        @test isapprox(getproperty(result.stats,fn), getproperty(stat_04,fn))
-    end
+    #for fn in fieldnames(typeof(result.stats))
+    #    @test isapprox(getproperty(result.stats,fn), getproperty(stat_04,fn))
+    #end
 end
 
 @testset "dihedral metrics" begin

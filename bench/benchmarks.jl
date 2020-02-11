@@ -71,7 +71,9 @@ for ttol in 0.01:0.01:0.05, deltat in 0.05:0.05:0.1, el = 0.1:0.05:0.2
                      stats=true)
     running_time = time() - rt # approximate, since we mostly care about convergence factors
     item = "torus$timestamp"
-    folder = joinpath(@__DIR__, "output/$item")
+    folder = joinpath(@__DIR__, "output")
+    !isdir(folder) && mkdir(folder)
+    folder = joinpath(folder, "$item")
     !isdir(folder) && mkdir(folder)
     param_str = "_ttol=$(ttol)_deltat=$(deltat)_el=$(el)"
     # save plots

@@ -92,11 +92,6 @@ function distmesh(fdist::Function,
     L0 = non_uniform ? eltype(VertType)[] : nothing # desired edge length computed by dh (edge length function)
     maxmove = typemax(eltype(VertType))         # stores an iteration max movement for retriangulation
 
-    # arrays for tracking quality metrics
-    tris = NTuple{3,Int32}[]        # triangles used for quality checks
-    triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
-    qualities = eltype(VertType)[]
-
     # information on each iteration
     lcount = 0 # iteration counter
     triangulationcount = 0 # triangulation counter
@@ -167,15 +162,9 @@ function distmesh(fdist::Function,
         if stats
             push!(result.stats.maxmove,maxmove)
             push!(result.stats.maxdp,maxdp)
-            triangle_qualities!(tris,triset,qualities,result.points,result.tetrahedra)
-            sort!(qualities) # sort for median calc and robust summation
-            mine, maxe = extrema(qualities)
-            push!(result.stats.average_qual, sum(qualities)/length(qualities))
-            push!(result.stats.median_qual, qualities[round(Int,length(qualities)/2)])
-            push!(result.stats.minimum_qual, mine)
-            push!(result.stats.maximum_qual, maxe)
-            min_v_edge, max_v_edge = volume_edge_extrema(result.points,result.tetrahedra)
+            min_v_edge, avg_v_edge, max_v_edge = volume_edge_stats(result.points,result.tetrahedra)
             push!(result.stats.min_volume_edge_ratio, min_v_edge)
+            push!(result.stats.average_volume_edge_ratio, avg_v_edge)
             push!(result.stats.max_volume_edge_ratio, max_v_edge)
         end
 
