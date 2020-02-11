@@ -179,6 +179,9 @@ function distmesh(fdist::Function,
             push!(result.stats.median_qual, qualities[round(Int,length(qualities)/2)])
             push!(result.stats.minimum_qual, mine)
             push!(result.stats.maximum_qual, maxe)
+            min_v_edge, max_v_edge = volume_edge_extrema(result.points,result.tetrahedra)
+            push!(result.stats.min_volume_edge_ratio, min_v_edge)
+            push!(result.stats.max_volume_edge_ratio, max_v_edge)
         end
 
         # Termination criterion

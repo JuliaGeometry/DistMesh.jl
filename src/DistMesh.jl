@@ -89,10 +89,12 @@ struct DistMeshStatistics{T}
     median_qual::Vector{T}
     minimum_qual::Vector{T}
     maximum_qual::Vector{T}
+    min_volume_edge_ratio::Vector{T}
+    max_volume_edge_ratio::Vector{T}
     retriangulations::Vector{Int} # Iteration num where retriangulation occured
 end
 
-DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[],[],[])
+DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[],[],[],[],[])
 
 """
 Uniform edge length function.

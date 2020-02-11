@@ -4,8 +4,8 @@ using Plots
 using Dates
 using Descartes
 using GeometryBasics
-using JLD
-using HDF5
+#using JLD
+#using HDF5
 
 include("util.jl")
 
@@ -60,31 +60,29 @@ println("Benchmarking DistMesh.jl...")
 
 timestamp = Dates.format(now(), "yyyy-mm-ddTHH_MM")
 # generate an orthogonal test suite
-for ttol in 0.01:0.01:0.05, deltat in 0.02:0.02:0.2, el = 0.05:0.05:0.2
+for ttol in 0.01:0.01:0.05, deltat in 0.05:0.05:0.1, el = 0.1:0.05:0.2
     rt = time()
-    p,t,s = distmesh(torus,
-                     huniform,
+    result = distmesh(torus,
+                     HUniform(),
                      el,
-                     DistMeshSetup(deltat=deltat, retriangulation_criteria=RetriangulateMaxMove(ttol)),
+                     DistMeshSetup(deltat=deltat,ttol=ttol,distribution=:packed),
                      origin = GeometryBasics.Point{3,Float64}(-2),
                      widths = GeometryBasics.Point{3,Float64}(4),
-                     stats=true,
-                     distribution=:packed)
+                     stats=true)
     running_time = time() - rt # approximate, since we mostly care about convergence factors
     item = "torus$timestamp"
     folder = joinpath(@__DIR__, "output/$item")
     !isdir(folder) && mkdir(folder)
     param_str = "_ttol=$(ttol)_deltat=$(deltat)_el=$(el)"
     # save plots
-    plotout(s, DistMesh.triangle_qualities(p,t), folder, param_str)
+    plotout(result.stats, DistMesh.triangle_qualities(result.points,result.tetrahedra), folder, param_str)
     # save dataset as JLD
-    jldopen("$folder/$item.jld", "w") do file
-        g = g_create(file, param_str)
-        g["points"] = p
-        g["tets"] = t
-        g["stats"] = s
-        g["running_time"] = running_time
-    end
+    # jldopen("$folder/$item.jld", "w") do file
+    #     g = g_create(file, param_str)
+    #     g["points"] = p
+    #     g["tets"] = t
+    #     g["stats"] = s
+    #     g["running_time"] = running_time
+    # end
     println(param_str)
 end
-
