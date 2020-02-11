@@ -97,7 +97,7 @@ function volume_edge_ratio(a,b,c,d)
     edges = (t,u,v,a.-b,b.-c,a.-c)
     lengths = dot.(edges,edges)
     l_rms = sqrt(sum(lengths)/6)
-    return sqrt(2)*volume/(l_rms^3)
+    return sqrt(2)*abs(volume)/(l_rms^3)
 end
 
 """
