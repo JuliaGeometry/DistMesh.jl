@@ -13,7 +13,7 @@ abstract type AbstractDistMeshAlgorithm end
 """
     DistMeshSetup
 
-    Takes Keyword arguments as follows:
+Takes Keyword arguments as follows:
 
     iso (default: 0): Value of which to extract the isosurface, inside surface is negative
     deltat (default: 0.1): the fraction of edge displacement to apply each iteration
@@ -54,6 +54,8 @@ end
 """
     DistMeshQuality
 
+Use Tetrahedral quality analysis to control the meshing process
+
     iso (default: 0): Value of which to extract the iso surface, inside negative
     deltat (default: 0.1): the fraction of edge displacement to apply each iteration
 """
@@ -61,6 +63,9 @@ struct DistMeshQuality{T} <: AbstractDistMeshAlgorithm
     iso::T
     deltat::T
     minimum::T
+    sort::Bool # use hilbert sort to cache-localize points
+    sort_interval::Int # retriangulations before resorting
+    nonlinear::Bool # uses nonlinear edge force
     distribution::Symbol # intial point distribution
 end
 
@@ -68,6 +73,9 @@ function DistMeshQuality(;iso=0,
                         ptol=.001,
                         deltat=0.05,
                         ttol=0.02,
+                        sort=false,
+                        sort_interval=20,
+                        nonlinear=false,
                         distribution=:regular)
     T = promote_type(typeof(iso),typeof(ptol),typeof(deltat), typeof(ttol))
     DistMeshQuality{T}(iso,
@@ -101,7 +109,7 @@ Uniform edge length function.
 """
 struct HUniform end
 
-include("common.jl")
+
 include("diff.jl")
 include("pointdistribution.jl")
 include("distmeshnd.jl")
