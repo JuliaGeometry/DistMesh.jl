@@ -73,15 +73,10 @@ function distmesh(fdist::Function,
         p = VertType[]
     end
 
-    pt_dists = map(fdist, p) # cache to store point locations so we can minimize fdist calls
+    pt_dists = eltype(VertType)[]
 
-    # add points to p based on the initial distribution
-    if setup.distribution === :regular
-        simplecubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
-    elseif setup.distribution === :packed
-        # face-centered cubic point distribution
-        facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
-    end
+    # setup the initial point distribution specified in setup
+    point_distribution!(fdist,p,pt_dists,h, setup, origin, widths, VertType)
 
     # Result struct for holding points, simplices, and iteration statistics
     result = DistMeshResult(p,

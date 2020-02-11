@@ -62,7 +62,9 @@ Use Tetrahedral quality analysis to control the meshing process
 struct DistMeshQuality{T} <: AbstractDistMeshAlgorithm
     iso::T
     deltat::T
-    minimum::T
+    filter_less_than::T # Remove tets less than the given quality
+    #allow_n_regressions::Int # Might want this
+    termination_quality::T # Once achieved, terminate
     sort::Bool # use hilbert sort to cache-localize points
     sort_interval::Int # retriangulations before resorting
     nonlinear::Bool # uses nonlinear edge force
@@ -70,19 +72,21 @@ struct DistMeshQuality{T} <: AbstractDistMeshAlgorithm
 end
 
 function DistMeshQuality(;iso=0,
-                        ptol=.001,
                         deltat=0.05,
-                        ttol=0.02,
+                        filter_less_than=0.02,
+                        termination_quality=0.3,
                         sort=false,
                         sort_interval=20,
-                        nonlinear=false,
+                        nonlinear=true,
                         distribution=:regular)
-    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat), typeof(ttol))
-    DistMeshQuality{T}(iso,
-                     deltat,
-                     ttol,
-                     ptol,
-                     distribution)
+    DistMeshQuality(iso,
+                    deltat,
+                    filter_less_than,
+                    termination_quality,
+                    sort,
+                    sort_interval,
+                    nonlinear,
+                    distribution)
 end
 
 """
