@@ -85,3 +85,53 @@ function min_dihedral_angles(p,t)
     end
     a
 end
+
+"""
+    Computes the volume and edge-length ratio from four given points
+"""
+function volume_edge_ratio(a,b,c,d)
+    t = a .- d
+    u = b .- d
+    v = c .- d
+    volume = t[1]*(u[2]*v[3]-v[2]*u[3])-u[1]*(t[2]*v[3]-v[2]*t[3])+v[1]*(t[2]*u[3]-u[2]*t[3])
+    edges = (t,u,v,a.-b,b.-c,a.-c)
+    lengths = dot.(edges,edges)
+    l_rms = sqrt(sum(lengths)/6)
+    return sqrt(2)*abs(volume)/(l_rms^3)
+end
+
+"""
+
+returns the extrema elements (min, max) of the sampled qualities
+"""
+function volume_edge_extrema(points::Vector{T},tets) where {T}
+    n = length(tets)
+    min_q = typemax(eltype(T))
+    max_q = typemin(eltype(T))
+    @inbounds for i = 1:n
+        tet = tets[i]
+        q = volume_edge_ratio(points[tet[1]],points[tet[2]],points[tet[3]],points[tet[4]])
+        min_q = min(q,min_q)
+        max_q = max(q,max_q)
+    end
+    min_q, max_q
+end
+
+"""
+
+returns the (min, avg, max) of the sampled qualities
+"""
+function volume_edge_stats(points::Vector{T},tets) where {T}
+    n = length(tets)
+    min_q = typemax(eltype(T))
+    max_q = typemin(eltype(T))
+    sum_q = zero(eltype(T))
+    @inbounds for i = 1:n
+        tet = tets[i]
+        q = volume_edge_ratio(points[tet[1]],points[tet[2]],points[tet[3]],points[tet[4]])
+        min_q = min(q,min_q)
+        max_q = max(q,max_q)
+        sum_q += q
+    end
+    min_q, sum_q/n, max_q
+end

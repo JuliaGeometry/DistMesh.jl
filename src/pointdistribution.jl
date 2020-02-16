@@ -23,3 +23,15 @@ function facecenteredcubic!(fdist, points, dists, h, iso, origin, widths, ::Type
         end
     end
 end
+
+function point_distribution!(fdist, p, pt_dists, h, setup, origin, widths, ::Type{VertType}) where VertType
+    map!(fdist, pt_dists, p) # cache to store point locations so we can minimize fdist calls
+
+    # add points to p based on the initial distribution
+    if setup.distribution === :regular
+        simplecubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
+    elseif setup.distribution === :packed
+        # face-centered cubic point distribution
+        facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
+    end
+end

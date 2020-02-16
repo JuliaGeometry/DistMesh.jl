@@ -73,15 +73,10 @@ function distmesh(fdist::Function,
         p = VertType[]
     end
 
-    pt_dists = map(fdist, p) # cache to store point locations so we can minimize fdist calls
+    pt_dists = eltype(VertType)[]
 
-    # add points to p based on the initial distribution
-    if setup.distribution === :regular
-        simplecubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
-    elseif setup.distribution === :packed
-        # face-centered cubic point distribution
-        facecenteredcubic!(fdist, p, pt_dists, h, setup.iso, origin, widths, VertType)
-    end
+    # setup the initial point distribution specified in setup
+    point_distribution!(fdist,p,pt_dists,h, setup, origin, widths, VertType)
 
     # Result struct for holding points, simplices, and iteration statistics
     result = DistMeshResult(p,
@@ -96,11 +91,6 @@ function distmesh(fdist::Function,
     L = eltype(VertType)[]                      # vector length of each edge
     L0 = non_uniform ? eltype(VertType)[] : nothing # desired edge length computed by dh (edge length function)
     maxmove = typemax(eltype(VertType))         # stores an iteration max movement for retriangulation
-
-    # arrays for tracking quality metrics
-    tris = NTuple{3,Int32}[]        # triangles used for quality checks
-    triset = Set{NTuple{3,Int32}}() # set for triangles to ensure uniqueness
-    qualities = eltype(VertType)[]
 
     # information on each iteration
     lcount = 0 # iteration counter
@@ -172,13 +162,10 @@ function distmesh(fdist::Function,
         if stats
             push!(result.stats.maxmove,maxmove)
             push!(result.stats.maxdp,maxdp)
-            triangle_qualities!(tris,triset,qualities,result.points,result.tetrahedra)
-            sort!(qualities) # sort for median calc and robust summation
-            mine, maxe = extrema(qualities)
-            push!(result.stats.average_qual, sum(qualities)/length(qualities))
-            push!(result.stats.median_qual, qualities[round(Int,length(qualities)/2)])
-            push!(result.stats.minimum_qual, mine)
-            push!(result.stats.maximum_qual, maxe)
+            min_v_edge, avg_v_edge, max_v_edge = volume_edge_stats(result.points,result.tetrahedra)
+            push!(result.stats.min_volume_edge_ratio, min_v_edge)
+            push!(result.stats.average_volume_edge_ratio, avg_v_edge)
+            push!(result.stats.max_volume_edge_ratio, max_v_edge)
         end
 
         # Termination criterion
@@ -225,4 +212,52 @@ function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulatio
     end
     j <= lastindex(t) && resize!(t, j-1)
     nothing
+end
+
+
+function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
+    ::Type{VertType}) where {VertType}
+
+    non_uniform = isa(typeof(L0), AbstractVector)
+
+    # compute edge lengths (L) and adaptive edge lengths (L0)
+    # Lp norm (p=3) is partially computed here
+    Lsum = zero(eltype(L))
+    L0sum = non_uniform ? zero(eltype(L0)) : length(pair)
+    for i in eachindex(pair)
+        pb = pair[i]
+        b1 = p[pb[1]]
+        b2 = p[pb[2]]
+        barvec = b1 - b2 # bar vector
+        bars[i] = barvec
+        L[i] = sqrt(sum(barvec.^2)) # length
+        non_uniform && (L0[i] = fh((b1+b2)./2))
+        Lsum = Lsum + L[i].^3
+        non_uniform && (L0sum = L0sum + L0[i].^3)
+    end
+
+    # zero out force at each node
+    for i in eachindex(dp)
+        dp[i] = zero(VertType)
+    end
+
+    # this is not hoisted correctly in the loop so we initialize here
+    # finish computing the Lp norm (p=3)
+    lscbrt = (1+(0.4/2^2))*cbrt(Lsum/L0sum)
+
+    # Move mesh points based on edge lengths L and forces F
+    for i in eachindex(pair)
+        if non_uniform && L[i] < L0[i]*lscbrt || L[i] < lscbrt
+            L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
+            # compute force vectors
+            F = setup.nonlinear ? (L[i]+L0_f)*(L0_f-L[i])/(2*L0_f) : L0_f-L[i]
+            # edges are not allowed to pull, only repel
+            FBar = bars[i].*F./L[i]
+            # add the force vector to the node
+            b1 = pair[i][1]
+            b2 = pair[i][2]
+            dp[b1] = dp[b1] .+ FBar
+            dp[b2] = dp[b2] .- FBar
+        end
+    end
 end

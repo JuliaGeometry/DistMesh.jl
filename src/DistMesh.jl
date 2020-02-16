@@ -13,7 +13,7 @@ abstract type AbstractDistMeshAlgorithm end
 """
     DistMeshSetup
 
-    Takes Keyword arguments as follows:
+Takes Keyword arguments as follows:
 
     iso (default: 0): Value of which to extract the isosurface, inside surface is negative
     deltat (default: 0.1): the fraction of edge displacement to apply each iteration
@@ -54,27 +54,39 @@ end
 """
     DistMeshQuality
 
+Use Tetrahedral quality analysis to control the meshing process
+
     iso (default: 0): Value of which to extract the iso surface, inside negative
     deltat (default: 0.1): the fraction of edge displacement to apply each iteration
 """
 struct DistMeshQuality{T} <: AbstractDistMeshAlgorithm
     iso::T
     deltat::T
-    minimum::T
+    filter_less_than::T # Remove tets less than the given quality
+    #allow_n_regressions::Int # Might want this
+    termination_quality::T # Once achieved, terminate
+    sort::Bool # use hilbert sort to cache-localize points
+    sort_interval::Int # retriangulations before resorting
+    nonlinear::Bool # uses nonlinear edge force
     distribution::Symbol # intial point distribution
 end
 
 function DistMeshQuality(;iso=0,
-                        ptol=.001,
                         deltat=0.05,
-                        ttol=0.02,
+                        filter_less_than=0.02,
+                        termination_quality=0.3,
+                        sort=false,
+                        sort_interval=20,
+                        nonlinear=true,
                         distribution=:regular)
-    T = promote_type(typeof(iso),typeof(ptol),typeof(deltat), typeof(ttol))
-    DistMeshQuality{T}(iso,
-                     deltat,
-                     ttol,
-                     ptol,
-                     distribution)
+    DistMeshQuality(iso,
+                    deltat,
+                    filter_less_than,
+                    termination_quality,
+                    sort,
+                    sort_interval,
+                    nonlinear,
+                    distribution)
 end
 
 """
@@ -85,21 +97,20 @@ end
 struct DistMeshStatistics{T}
     maxmove::Vector{T} # max point move in an iteration
     maxdp::Vector{T} # max displacmeent induced by an edge
-    average_qual::Vector{T}
-    median_qual::Vector{T}
-    minimum_qual::Vector{T}
-    maximum_qual::Vector{T}
+    min_volume_edge_ratio::Vector{T}
+    max_volume_edge_ratio::Vector{T}
+    average_volume_edge_ratio::Vector{T}
     retriangulations::Vector{Int} # Iteration num where retriangulation occured
 end
 
-DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[],[],[])
+DistMeshStatistics() = DistMeshStatistics{Float64}([],[],[],[],[],[])
 
 """
 Uniform edge length function.
 """
 struct HUniform end
 
-include("common.jl")
+
 include("diff.jl")
 include("pointdistribution.jl")
 include("distmeshnd.jl")
