@@ -48,7 +48,8 @@ end
 """
 function tet_to_edges!(pair::Vector, pair_set::Set, t)
     empty!(pair_set)
-    empty!(pair)
+    iszero(length(pair)) && resize!(pair, length(t)*6) # allocate memory on first iteration
+    ind = 1
     @inbounds for i in eachindex(t)
         for ep in 1:6
             p1 = t[i][tetpairs[ep][1]]
@@ -56,7 +57,8 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
             elt = p1 > p2 ? (p2,p1) : (p1,p2)
             if !in(bitpack(elt[1],elt[2]), pair_set)
                 push!(pair_set, bitpack(elt[1],elt[2]))
-                push!(pair, elt)
+                pair[ind] = elt
+                ind += 1
             end
         end
     end
@@ -64,6 +66,7 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
     # TODO This seems to be really good for some geoemetries,
     # but intoduces larger performance regressions for others
     #sort!(pair)
+    return ind-1
 end
 
 function bitpack(xi,yi)
