@@ -205,7 +205,7 @@ function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulatio
     # TODO: can we use the point distance array to pass boundary points to
     #        tetgen so this call is no longer required?
     j = firstindex(t)
-    for ai in t
+    @inbounds for ai in t
         t[j] = ai
         pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
         j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
@@ -224,7 +224,7 @@ function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
     # Lp norm (p=3) is partially computed here
     Lsum = zero(eltype(L))
     L0sum = non_uniform ? zero(eltype(L0)) : length(pair)
-    for i in eachindex(pair)
+    @inbounds for i in eachindex(pair)
         pb = pair[i]
         b1 = p[pb[1]]
         b2 = p[pb[2]]
@@ -237,7 +237,7 @@ function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
     end
 
     # zero out force at each node
-    for i in eachindex(dp)
+    @inbounds for i in eachindex(dp)
         dp[i] = zero(VertType)
     end
 
@@ -246,7 +246,7 @@ function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
     lscbrt = (1+(0.4/2^2))*cbrt(Lsum/L0sum)
 
     # Move mesh points based on edge lengths L and forces F
-    for i in eachindex(pair)
+    @inbounds for i in eachindex(pair)
         if non_uniform && L[i] < L0[i]*lscbrt || L[i] < lscbrt
             L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
             # compute force vectors

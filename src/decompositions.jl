@@ -48,7 +48,7 @@ end
 """
 function tet_to_edges!(pair::Vector, pair_set::Set, t)
     empty!(pair_set)
-    for i in eachindex(t)
+    @inbounds for i in eachindex(t)
         for ep in 1:6
             p1 = t[i][tetpairs[ep][1]]
             p2 = t[i][tetpairs[ep][2]]
@@ -58,7 +58,7 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
     resize!(pair, length(pair_set))
     # copy pair set to array since sets are not sortable
     i = 1
-    for elt in pair_set
+    @inbounds for elt in pair_set
         pair[i] = elt
         i = i + 1
     end
