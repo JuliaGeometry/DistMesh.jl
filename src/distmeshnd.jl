@@ -95,6 +95,7 @@ function distmesh(fdist::Function,
     # information on each iteration
     lcount = 0 # iteration counter
     triangulationcount = 0 # triangulation counter
+    num_pairs = 0
 
     @inbounds while true
         # if large move, retriangulation
@@ -103,18 +104,20 @@ function distmesh(fdist::Function,
             # compute a new delaunay triangulation
             retriangulate!(fdist, result, geps, setup, triangulationcount, pt_dists)
 
-            tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
+            num_pairs = tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
 
             # resize arrays for new pair counts
-            resize!(bars, length(pair))
-            resize!(L, length(pair))
+            if triangulationcount == 0
+                resize!(bars, length(result.tetrahedra)*6)
+                resize!(L, length(result.tetrahedra)*6)
+            end
             non_uniform && resize!(L0, length(pair))
 
             triangulationcount += 1
             stats && push!(result.stats.retriangulations, lcount)
         end
 
-        compute_displacements!(fh, dp, pair, L, L0, bars, result.points, setup, VertType)
+        compute_displacements!(fh, dp, pair, num_pairs, L, L0, bars, result.points, setup, VertType)
 
         # Zero out forces on fix points
         if have_fixed
@@ -214,8 +217,9 @@ function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulatio
 end
 
 
-function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
-    ::Type{VertType}) where {VertType}
+
+function compute_displacements!(fh, dp, pair, num_pairs, L, L0, bars, p, setup,
+                                ::Type{VertType}) where {VertType}
 
     non_uniform = isa(typeof(L0), AbstractVector)
 
@@ -223,7 +227,7 @@ function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
     # Lp norm (p=3) is partially computed here
     Lsum = zero(eltype(L))
     L0sum = non_uniform ? zero(eltype(L0)) : length(pair)
-    for i in eachindex(pair)
+    for i in 1:num_pairs
         pb = pair[i]
         b1 = p[pb[1]]
         b2 = p[pb[2]]
@@ -245,7 +249,7 @@ function compute_displacements!(fh, dp, pair, L, L0, bars, p, setup,
     lscbrt = (1+(0.4/2^2))*cbrt(Lsum/L0sum)
 
     # Move mesh points based on edge lengths L and forces F
-    for i in eachindex(pair)
+    for i in 1:num_pairs
         if non_uniform && L[i] < L0[i]*lscbrt || L[i] < lscbrt
             L0_f = non_uniform ? L0[i].*lscbrt : lscbrt
             # compute force vectors
