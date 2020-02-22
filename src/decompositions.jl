@@ -64,7 +64,7 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
     end
 
     # sort the edge pairs for better point lookup
-    #sort!(pair)
+    sort!(view(pair, 1:(i-1)))
 
     return i - 1 # return the number of pairs
 end
