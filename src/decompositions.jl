@@ -48,23 +48,27 @@ end
 """
 function tet_to_edges!(pair::Vector, pair_set::Set, t)
     empty!(pair_set)
-    for i in eachindex(t)
+    length(pair) < length(t)*6 && resize!(pair, length(t)*6)
+    num_pair = 1
+    @inbounds for i in eachindex(t)
         for ep in 1:6
             p1 = t[i][tetpairs[ep][1]]
             p2 = t[i][tetpairs[ep][2]]
-            push!(pair_set, p1 > p2 ? (p2,p1) : (p1,p2))
+            elt = p1 > p2 ? (p2,p1) : (p1,p2)
+            if !in(elt, pair_set)
+                push!(pair_set, elt)
+                pair[num_pair] = elt
+                num_pair += 1
+            end
         end
-    end
-    length(pair) < length(pair_set) && resize!(pair, length(pair_set))
-    # copy pair set to array since sets are not sortable
-    i = 1
-    for elt in pair_set
-        pair[i] = elt
-        i = i + 1
     end
 
     # sort the edge pairs for better point lookup
-    sort!(view(pair, 1:(i-1)))
+    sort!(view(pair, 1:(num_pair-1)))
 
-    return i - 1 # return the number of pairs
+    return num_pair - 1 # return the number of pairs
+end
+
+function bitpack(xi,yi)
+    (unsafe_trunc(UInt64, xi) << 32) | unsafe_trunc(UInt64, yi)
 end
