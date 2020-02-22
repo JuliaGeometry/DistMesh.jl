@@ -55,7 +55,7 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
             push!(pair_set, p1 > p2 ? (p2,p1) : (p1,p2))
         end
     end
-    resize!(pair, length(pair_set))
+    length(pair) < length(pair_set) && resize!(pair, length(pair_set))
     # copy pair set to array since sets are not sortable
     i = 1
     for elt in pair_set
@@ -64,7 +64,7 @@ function tet_to_edges!(pair::Vector, pair_set::Set, t)
     end
 
     # sort the edge pairs for better point lookup
-    sort!(pair)
+    #sort!(pair)
 
-    return length(pair) # return the number of pairs
+    return i - 1 # return the number of pairs
 end

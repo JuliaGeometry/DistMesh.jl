@@ -106,12 +106,10 @@ function distmesh(fdist::Function,
 
             num_pairs = tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
 
-            # resize arrays for new pair counts
-            if triangulationcount == 0
-                resize!(bars, length(result.tetrahedra)*6)
-                resize!(L, length(result.tetrahedra)*6)
-            end
-            non_uniform && resize!(L0, length(pair))
+            # resize arrays for new pair count
+            length(bars) < num_pairs && resize!(bars, num_pairs)
+            length(L) < num_pairs && resize!(L, num_pairs)
+            non_uniform && length(L0) < num_pairs && resize!(L0, num_pairs)
 
             triangulationcount += 1
             stats && push!(result.stats.retriangulations, lcount)
@@ -226,7 +224,7 @@ function compute_displacements!(fh, dp, pair, num_pairs, L, L0, bars, p, setup,
     # compute edge lengths (L) and adaptive edge lengths (L0)
     # Lp norm (p=3) is partially computed here
     Lsum = zero(eltype(L))
-    L0sum = non_uniform ? zero(eltype(L0)) : length(pair)
+    L0sum = non_uniform ? zero(eltype(L0)) : num_pairs
     for i in 1:num_pairs
         pb = pair[i]
         b1 = p[pb[1]]
