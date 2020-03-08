@@ -46,11 +46,11 @@ end
     Decompose tets to edges, using a pre-allocated array and set.
     Set ensures uniqueness, and result will be sorted.
 """
-function tet_to_edges!(pair::Vector, pair_set::Set, t)
+function tet_to_edges!(pair::Vector, pair_set::Set, t, num_tets)
     empty!(pair_set)
-    length(pair) < length(t)*6 && resize!(pair, length(t)*6)
+    length(pair) < num_tets*6 && resize!(pair, num_tets*6)
     num_pair = 1
-    @inbounds for i in eachindex(t)
+    @inbounds for i in 1:num_tets
         for ep in 1:6
             p1 = t[i][tetpairs[ep][1]]
             p2 = t[i][tetpairs[ep][2]]

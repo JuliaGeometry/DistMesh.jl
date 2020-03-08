@@ -96,15 +96,16 @@ function distmesh(fdist::Function,
     lcount = 0 # iteration counter
     triangulationcount = 0 # triangulation counter
     num_pairs = 0
+    num_tets = 0
 
     @inbounds while true
         # if large move, retriangulation
         if maxmove>setup.ttol*h
 
             # compute a new delaunay triangulation
-            retriangulate!(fdist, result, geps, setup, triangulationcount, pt_dists)
+            num_tets = retriangulate!(fdist, result, geps, setup, triangulationcount, pt_dists)
 
-            num_pairs = tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
+            num_pairs = tet_to_edges!(pair, pair_set, result.tetrahedra, num_tets) # Describe each edge by a unique pair of nodes
 
             # resize arrays for new pair count
             length(bars) < num_pairs && resize!(bars, num_pairs)
@@ -170,6 +171,7 @@ function distmesh(fdist::Function,
 
         # Termination criterion
         if maxdp<setup.ptol*h
+            resize!(result.tetrahedra, num_tets)
             return result
         end
     end
@@ -195,8 +197,7 @@ function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulatio
     p = result.points
     triangulation = delaunayn(p)
     t_d = triangulation.tetrahedra
-    resize!(t, length(t_d))
-    copyto!(t, t_d) # we need to copy since we have a shared reference with tetgen
+    length(t) < length(t_d) && resize!(t, length(t_d))
 
     # average points to get mid point of each tetrahedra
     # if the mid point of the tetrahedra is outside of
@@ -204,14 +205,15 @@ function retriangulate!(fdist, result::DistMeshResult, geps, setup, triangulatio
     # TODO: this is an inlined filter call. Would be good to revert
     # TODO: can we use the point distance array to pass boundary points to
     #        tetgen so this call is no longer required?
-    j = firstindex(t)
-    for ai in t
+    j = 1
+    for ai in t_d
         t[j] = ai
         pm = (p[ai[1]].+p[ai[2]].+p[ai[3]].+p[ai[4]])./4
-        j = ifelse(fdist(pm) <= -geps, nextind(t, j), j)
+        j = ifelse(fdist(pm) <= -geps, j+1, j)
     end
-    j <= lastindex(t) && resize!(t, j-1)
-    nothing
+    #j <= lastindex(t) && resize!(t, j-1)
+    j <= length(t_d) && return j-1
+    return length(t_d)
 end
 
 
