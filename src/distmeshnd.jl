@@ -107,9 +107,11 @@ function distmesh(fdist::Function,
             num_pairs = tet_to_edges!(pair, pair_set, result.tetrahedra) # Describe each edge by a unique pair of nodes
 
             # resize arrays for new pair count
-            length(bars) < num_pairs && resize!(bars, num_pairs)
-            length(L) < num_pairs && resize!(L, num_pairs)
-            non_uniform && length(L0) < num_pairs && resize!(L0, num_pairs)
+            if length(L) < num_pairs
+                resize!(bars, num_pairs)
+                resize!(L, num_pairs)
+                non_uniform && resize!(L0, num_pairs)
+            end
 
             triangulationcount += 1
             stats && push!(result.stats.retriangulations, lcount)
