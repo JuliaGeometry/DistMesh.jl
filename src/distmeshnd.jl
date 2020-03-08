@@ -138,21 +138,20 @@ function distmesh(fdist::Function,
             move = sqrt(sum((p[i]-p0).^2))          # compute movement from the displacement
             d_est = pt_dists[i] + move              # apply the movement to our cache point
             d = d_est < -geps ? d_est : fdist(result.points[i]) # determine if we need correct or approximate distance
-            pt_dists[i] = d                         # store distance
 
             if d < -geps
                 maxdp = max(maxdp, setup.deltat*sqrt(sum(dp[i].^2)))
             end
 
             if d <= setup.iso
+                pt_dists[i] = d                         # store distance
                 maxmove = max(move,maxmove)
-                continue
+            else
+                # bring points back to boundary if outside using central difference
+                p[i] = p[i] .- centraldiff(fdist,p[i]).*(d+setup.iso)
+                maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
+                pt_dists[i] = setup.iso # ideally
             end
-
-            # bring points back to boundary if outside using central difference
-            p[i] = p[i] .- centraldiff(fdist,p[i]).*(d+setup.iso)
-            maxmove = max(sqrt(sum((p[i]-p0).^2)), maxmove)
-            pt_dists[i] = setup.iso # ideally
         end
 
         # increment iteration counter
