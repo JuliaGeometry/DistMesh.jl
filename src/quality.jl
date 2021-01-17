@@ -37,7 +37,7 @@ end
 const ⋅ = dot
 const × = cross
 
-function dihedral(p0,p1,p2,p3)\
+function dihedral(p0,p1,p2,p3)
     b1 = p1 - p0
     b2 = p2 - p1
     b3 = p3 - p2
