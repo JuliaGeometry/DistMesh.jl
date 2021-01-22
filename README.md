@@ -7,3 +7,7 @@
 [![Coveralls](https://coveralls.io/repos/github/juliageometry/DistMesh.jl/badge.svg?branch=master)](https://coveralls.io/github/juliageometry/DistMesh.jl?branch=master)
 
 The package provides a Julia port of the [DistMesh](http://persson.berkeley.edu/distmesh/) algorithm developed by [Per-Olof Persson](http://persson.berkeley.edu/).
+
+There have been several improvements made to improve performance and output quality from the original Matlab version.
+
+[Technical Report](https://sjkellyorg.files.wordpress.com/2020/11/distmesh_sjkelly.pdf)
