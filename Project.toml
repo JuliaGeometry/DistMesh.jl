@@ -10,6 +10,8 @@ TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
 
 [compat]
 julia = "1.6"
+GeometryBasics = "0.4"
+TetGen = "1"
 
 [extras]
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
