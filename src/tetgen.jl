@@ -6,17 +6,17 @@ function delaunayn(points)
     # F - No face and edge info
     # I - No mesh iteration numbers
     # Q - Quiet
-    tetio = tetrahedralize(TetGen.TetgenIO(points), "JBNFIQ")
+    tetio = tetrahedralize(TetGen.JLTetGenIO(points), "JBNFIQ")
     tetio
 end
 
 function delaunayn_nosort(points)
-    tetio = tetrahedralize(TetGen.TetgenIO(points), "Qb/1") # Q- Quiet
+    tetio = tetrahedralize(TetGen.JLTetGenIO(points), "Qb/1") # Q- Quiet
     tetio
 end
 
 # needs some tweaks, gives garbage results, might need to twek the julia wrapper?
 function reconstruct!(points, tets)
-    tetio = tetrahedralize(TetGen.TetgenIO(points,tetrahedrons=tets), "Qr") # Q- Quiet, r- retriangulate
+    tetio = tetrahedralize(TetGen.JLTetGenIO(points,tetrahedrons=tets), "Qr") # Q- Quiet, r- retriangulate
     tetio
 end
