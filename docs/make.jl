@@ -8,7 +8,6 @@ makedocs(
     ],
     sitename="DistMesh.jl",
     authors="Steve Kelly <kd2cca@gmail.com>",
-    assets=String[],
 )
 
 deploydocs(
