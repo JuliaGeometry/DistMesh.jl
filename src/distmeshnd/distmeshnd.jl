@@ -1,5 +1,5 @@
 """
-    distmesh
+    distmeshnd
     3D Mesh Generator using Signed Distance Functions.
     Arguments:
         fdist:       Distance function
@@ -15,14 +15,14 @@
         d(p) = sqrt(sum(p.^2))-1
         p,t = distmeshnd(d,huniform,0.2)
 """
-function distmesh(fdist::Function,
-                  fh::Union{Function,HUniform},
-                  h::Number,
-                  setup::AbstractDistMeshAlgorithm=DistMeshSetup();
-                  origin=GeometryBasics.Point{3,Float64}(-1,-1,-1),
-                  widths=GeometryBasics.Point{3,Float64}(2,2,2),
-                  fix=nothing,
-                  stats=false) where {VertType}
+function distmeshnd(fdist::Function,
+                    fh::Union{Function,HUniform},
+                    h::Number,
+                    setup::AbstractDistMeshAlgorithm=DistMeshSetup();
+                    origin=GeometryBasics.Point{3,Float64}(-1,-1,-1),
+                    widths=GeometryBasics.Point{3,Float64}(2,2,2),
+                    fix=nothing,
+                    stats=false)
     # TODO: tetgen only handles Float64
     VT = GeometryBasics.Point{3,Float64}
     if isa(fix, Nothing)
@@ -32,13 +32,13 @@ function distmesh(fdist::Function,
     end
     o = VT(origin...)
     w = VT(widths...)
-    distmesh(fdist, fh, h, setup, o, w, fp, Val(stats), VT)
+    distmeshnd(fdist, fh, h, setup, o, w, fp, Val(stats), VT)
 end
 
 """
     DistMeshResult
 
-A struct returned from the `distmesh` function that includes point, simplex,
+A struct returned from the `distmeshnd` function that includes point, simplex,
 and interation statistics.
 """
 struct DistMeshResult{PT, TT, STATS}
@@ -47,15 +47,15 @@ struct DistMeshResult{PT, TT, STATS}
     stats::STATS
 end
 
-function distmesh(fdist::Function,
-                  fh,
-                  h::Number,
-                  setup::DistMeshSetup,
-                  origin,
-                  widths,
-                  fix,
-                  ::Val{stats},
-                  ::Type{VertType}) where {VertType, stats}
+function distmeshnd(fdist::Function,
+                    fh,
+                    h::Number,
+                    setup::DistMeshSetup,
+                    origin,
+                    widths,
+                    fix,
+                    ::Val{stats},
+                    ::Type{VertType}) where {VertType, stats}
 
     geps=1e-1*h+setup.iso # parameter for filtering tets outside bounds and considering for max displacment of a node
 
