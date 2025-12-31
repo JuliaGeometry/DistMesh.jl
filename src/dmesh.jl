@@ -35,3 +35,21 @@ function as_arrays(m::DMesh{D,T,N,I}) where {D,T,N,I}
     t_view = reinterpret(reshape, I, m.t)
     return p_view, t_view
 end
+
+
+# --- Helper for element names ---
+element_name(::Val{3}) = "triangle"
+element_name(::Val{4}) = "tetrahedron"
+element_name(::Val{N}) where N = "$N-simplex"
+
+# 1. Compact Show (Standard)
+function Base.show(io::IO, m::DMesh{D,T,N,I}) where {D,T,N,I}
+    print(io, "DMesh{$D,$T}($(length(m.p))n, $(length(m.t))e)")
+end
+
+# 2. Rich Show (MIME)
+function Base.show(io::IO, ::MIME"text/plain", m::DMesh{D,T,N,I}) where {D,T,N,I}
+    print(io, "DMesh: $(D)D, ")
+    print(io, "$(length(m.p)) nodes, ")
+    print(io, "$(length(m.t)) $(element_name(Val(N))) elements")
+end
