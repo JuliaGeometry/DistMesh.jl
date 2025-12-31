@@ -2,8 +2,8 @@
 # StaticVector shorthands
 
 const SF2 = SVector{2,Float64}
-const SI2 = SVector{2,Int}
-const SI3 = SVector{3,Int}
+const SI2 = SVector{2,Int32}
+const SI3 = SVector{3,Int32}
 
 ########################################################################
 # Utility functions
