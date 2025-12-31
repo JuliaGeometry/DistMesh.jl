@@ -17,7 +17,7 @@ The primary entry point for 2D meshing is `distmesh2d`.
 First, we generate the mesh.
 
 ```@example quickstart
-using DistMesh #, CairoMakie
+using DistMesh, Plots
 
 msh = distmesh2d(dcircle, huniform, 0.15, ((-1,-1), (1,1)))
 ```
@@ -25,7 +25,7 @@ msh = distmesh2d(dcircle, huniform, 0.15, ((-1,-1), (1,1)))
 Now we can visualize the result using `plot`.
 
 ```@example quickstart
-# plot(msh)
+plot(msh)
 ```
 
 Finally, if you need the raw coordinate and topology arrays for a solver, you can access the fields directly.

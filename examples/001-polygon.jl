@@ -3,7 +3,7 @@
 # This example demonstrates how to mesh a custom polygon using `dpoly`.
 
 using DistMesh
-#using Plots
+using Plots
 
 # ### 1. Define Vertices
 pv = [(-0.4, -0.5), (0.4, -0.2), (0.4, -0.7), (1.5, -0.4),
@@ -27,5 +27,4 @@ msh = distmesh2d(fd, huniform, h0, bbox, pv)
 # ### 4. Visualize
 # Plot the resulting mesh.
 
-#plot(msh)
-
+plot(msh)

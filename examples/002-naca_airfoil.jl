@@ -2,6 +2,7 @@
 
 
 using DistMesh
+using Plots
 using StaticArrays
 
 const SF2 = SVector{2,Float64}
@@ -32,5 +33,4 @@ end
 
 msh = distmesh2d(dm_naca()...)
 
-#plot(msh)
-
+plot(msh)
