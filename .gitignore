@@ -3,7 +3,9 @@
 *.jl.mem
 *.jl.*.mem
 .DS_Store
-/Manifest.toml
+Manifest.toml
 /dev/
 /docs/build/
 /docs/site/
+/docs/src/examples.md
+/docs/src/*.jl

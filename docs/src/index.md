@@ -1,53 +1,41 @@
 # DistMesh.jl
 
+**DistMesh.jl** is a Julia generator for unstructured triangular and tetrahedral meshes. It uses [Signed Distance Functions](https://en.wikipedia.org/wiki/Signed_distance_function) (SDFs) to define geometries, allowing for clean mesh generation of complex shapes using simple mathematical functions.
 
-DistMesh.jl implements simplex refinement on signed distance functions, or anything that
-has a sign, distance, and called like a function. The algorithm was first presented
-in 2004 by Per-Olof Persson, and was initially a port of the corresponding Matlab Code.
+## Installation
 
-## What is Simplex Refinement?
+```julia
+using Pkg
+Pkg.add("DistMesh")
 
-In layman's terms, a simplex is either a triangle in the 2D case, or a tetrahedra in the 3D case.
-
-When simulating, you other want a few things from a mesh of simplices:
-    - Accurate approximation of boundaries and features
-    - Adaptive mesh sizes to improve accuracy
-    - Near-Regular Simplicies
-
-DistMesh is designed to address the above.
-
-## Algorithm Overview
-
-The basic processes is as follows:
-
-
-
-## Comparison to other refinements
-
-DistMesh generally has a very low memory footprint, and can refine without additional
-memory allocation. Similarly, since the global state of simplex qualities is accounted for
-in each refinement iteration, this leads to very high quality meshes.
-
-Aside from the above, since DistMesh works on signed distance functions it can handle
-complex and varied input data that are not in the form of surface meshes (Piecewise Linear Complicies).
-
-## Difference from the MatLab implementation
-
-Given the same parameters, the Julia implementation of DistMesh will generally perform
-4-60 times faster than the MatLab implementation. Delaunay Triangulation in MatLab uses
-QHull, whereas DistMesh.jl uses TetGen.
-
-## How do I get a Signed Distance Function?
-
-Here are some libraries that turn gridded and level set data into an approximate signed
-distance function:
-
-- Interpolations.jl
-- AdaptiveDistanceFields.jl
-
-```@index
 ```
 
-```@autodocs
-Modules = [DistMesh]
+## Quick Start (2D)
+
+The primary entry point for 2D meshing is `distmesh2d`.
+
+First, we generate the mesh.
+
+```@example quickstart
+using DistMesh #, CairoMakie
+
+msh = distmesh2d(dcircle, huniform, 0.15, ((-1,-1), (1,1)))
+```
+
+Now we can visualize the result using `plot`.
+
+```@example quickstart
+# plot(msh)
+```
+
+Finally, if you need the raw coordinate and topology arrays for a solver, you can access the fields directly.
+
+```@example quickstart
+# Access the points and connectivity as matrices
+p,t = as_arrays(msh)
+p
+```
+
+```@example quickstart
+t
 ```

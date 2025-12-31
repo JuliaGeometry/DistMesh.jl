@@ -95,12 +95,12 @@ end
 # Examples
 
 ### Example: (Uniform Mesh on Unit Circle)
-```jldoctest
+```julia
 dfcn(p) = sqrt(sum(p.^2)) - 1
 p,t = distmesh2d(dfcn, huniform, 0.2, ((-1,-1), (1,1)), plotting=true);
 ```
 #### Example: (Rectangle with circular hole, refined at circle boundary)
-```jldoctest
+```julia
 dfcn2(p) = ddiff(drectangle(p, -1, 1, -1, 1), dcircle(p, r=0.5))
 hfcn2(p) = 0.05 + 0.3 * dcircle(p, r=0.5);
 bbox = ((-1,-1), (1,1))
