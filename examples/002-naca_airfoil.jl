@@ -5,7 +5,7 @@ using DistMesh
 using Plots
 using StaticArrays
 
-const SF2 = SVector{2,Float64}
+const Point2 = SVector{2, Float64}
 
 function hnaca(p; hlead=0.01, htrail=0.04, hmax=2.0)
     minimum((hlead + 0.3 * dcircle(p, c=(0, 0), r=0),
@@ -17,14 +17,14 @@ function fixnaca(; htrail=0.04)
     a0, a14... = naca_coeffs
     fixx = 1 .- htrail * cumsum(1.3 .^ (0:4))
     fixy = a0 * sqrt.(fixx) .+ fixx .^ (1:4)' * a14
-    fix = vcat(SF2[(0,0),(1,0)], [ SF2[(x,y),(x,-y)] for (x,y) in zip(fixx,fixy) ]...)
+    fix = vcat(Point2[(0,0),(1,0)], [ Point2[(x,y),(x,-y)] for (x,y) in zip(fixx,fixy) ]...)
 end
 
 function dm_naca(; hlead=0.01, htrail=0.04, hmax=2.0, circx=2.0, circr=4.0)
     dfcn(p) = ddiff(dcircle(p, c=(circx, 0), r=circr), dnaca(p))
     hfcn(p) = hnaca(p; hlead=hlead, htrail=htrail, hmax=hmax)
 
-    fix = SF2[(1,0),(0,1),(-1,0),(0,-1)] .* circr .+ SF2[(circx,0)]
+    fix = Point2[(1,0),(0,1),(-1,0),(0,-1)] .* circr .+ Point2[(circx,0)]
     fix = vcat(fix, fixnaca(htrail=htrail))
     bbox = [(circx - circr, -circr), (circx + circr, circr)]
     h0 = minimum((hlead, htrail, hmax))
