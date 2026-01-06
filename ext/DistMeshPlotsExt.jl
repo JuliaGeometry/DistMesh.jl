@@ -15,4 +15,6 @@ function Plots.plot(m::DMesh{2,T,N,I}; args...) where {T,N,I}
     h = Plots.plot(vec(pxy(1)), vec(pxy(2)); args...)
 end
 
+DistMesh.live_plot(m::DMesh; args...) = display(plot(m))
+
 end

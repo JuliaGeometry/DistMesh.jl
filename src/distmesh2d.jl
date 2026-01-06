@@ -138,7 +138,7 @@ function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2[];
         if maximum(norm.(p .- pold)) > ttol
             pold = copy(p)
             t, bars = retriangulate(p, dfcn, geps)
-            plotting && display(simpplot(p, t))
+            plotting && live_plot(DMesh(p,t))
         end
 
         # All bars and lengths
@@ -166,6 +166,8 @@ function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2[];
     end
     
     converged || @warn "No convergence in maxiter=$maxiter iterations"
-    plotting && display(simpplot(p, t))
-    return DMesh(p, t)
+
+    msh = DMesh(p, t)
+    plotting && live_plot(msh)
+    return msh
 end

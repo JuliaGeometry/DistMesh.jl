@@ -53,3 +53,15 @@ function Base.show(io::IO, ::MIME"text/plain", m::DMesh{D,T,N,I}) where {D,T,N,I
     print(io, "$(length(m.p)) nodes, ")
     print(io, "$(length(m.t)) $(element_name(Val(N))) elements")
 end
+
+
+# Global flag to track if we have warned the user yet
+const _has_warned_plot = Ref(false)
+
+function live_plot(args...)
+    if !_has_warned_plot[]
+        @warn "Live plotting was requested, but no plotting backend is loaded. Try `using Plots`."
+        _has_warned_plot[] = true
+    end
+    return nothing
+end
