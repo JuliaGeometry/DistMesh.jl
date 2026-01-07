@@ -79,21 +79,17 @@ function DistMesh.live_plot(m::DMesh{2})
 
     if isempty(ax.scene.plots)
         # --- INITIALIZATION ---
-        # If axis is empty, draw for the first time
         poly!(ax, gl_mesh, color=MESH_COLOR, strokewidth=1)
         autolimits!(ax)
+        display(f) 
     else
         # --- UPDATE ---
-        # If plot exists, update the Observable in place (Zero Allocation on GPU)
         plt = ax.scene.plots[1]
-        
-        # We update the first argument of the plot object
         plt[1][] = gl_mesh
+        # autolimits!(ax)   # technically needed, but makes animation non-smooth
     end
     
-    # Yield to the event loop so the window redraws
     sleep(0.01)
-    
     return f
 end
 
