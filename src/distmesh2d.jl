@@ -8,10 +8,6 @@ const Index3 = SVector{3, Int32}   # For Triangles
 ########################################################################
 # Utility functions
 
-extract_elements(tri::Delaunator.Triangulation{I}) where {I} =
-    reinterpret(SVector{3, I}, triangles(tri))
-delaunay(p) = extract_elements(triangulate(p))
-
 barvectors(p, bars) = [ p[bar[1]] - p[bar[2]] for bar in bars ]
 
 function init_nodes(bbox, h0)
