@@ -3,7 +3,7 @@
 # This example demonstrates how to mesh a custom polygon using `dpoly`.
 
 using DistMesh
-using Plots
+using GLMakie
 
 # ### 1. Define Vertices
 pv = [(-0.4, -0.5), (0.4, -0.2), (0.4, -0.7), (1.5, -0.4),

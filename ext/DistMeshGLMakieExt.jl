@@ -2,39 +2,99 @@ module DistMeshGLMakieExt
 
 using DistMesh
 using GLMakie
+using GeometryBasics 
 
-const meshgreen = Plots.RGBX(0.8, 1, 0.8)
+const MESH_COLOR = "#DDEEFF"
 
-function GLMakie.plot(m::DMesh{2,T,N,I};
-    labels=(), reltol=1e-3, abstol=Inf, maxref=6,
-    colors=(meshgreen, :black, :blue, :darkgray, :darkblue)
-    # colors: elements, int edges, bnd edges, ho-nodes, vertices
-) where {T,N,I}
+# ---------------------------------------------------------
+# 1. Helpers
+# ---------------------------------------------------------
 
-    # elem_lines, int_lines, bnd_lines, elem_mid =
-    #     viz_mesh(m, reltol=reltol, abstol=abstol, maxref=maxref)
+"""
+    get_canvas(; aspect=DataAspect())
 
-    # h = Plots.plot(aspect_ratio=:equal, leg=false)
-    # Plots.plot!(elem_lines[:, 1], elem_lines[:, 2], seriestype=:shape,
-    #             linecolor=nothing, fillcolor=colors[1])
-    # Plots.plot!(int_lines[:, 1], int_lines[:, 2], linewidth=1, color=colors[2])
-    # Plots.plot!(bnd_lines[:, 1], bnd_lines[:, 2], linewidth=2, color=colors[3])
+Gets the current figure/axis if they exist, or creates new ones.
+"""
+function get_canvas(; aspect=DataAspect())
+    fig = current_figure()
+    if isnothing(fig)
+        fig = Figure(size=(800, 800))
+        ax = Axis(fig[1,1], aspect=aspect)
+        return fig, ax
+    else
+        ax = current_axis()
+        if isnothing(ax)
+            ax = Axis(fig[1,1], aspect=aspect)
+        end
+        return fig, ax
+    end
+end
 
-    # if isa(labels, Symbol)
-    #     labels = (labels,)
-    # end
+"""
+    to_gl_mesh(m::DMesh)
 
-    # if :nodes in labels
-    #     scatter!(m.x[:,1], m.x[:,2], marker=(:circle, 2, 1.0, colors[4]))
-    # end
+Converts a DistMesh DMesh object into a GeometryBasics.normal_mesh
+suitable for high-performance GLMakie plotting and updates.
+"""
+function to_gl_mesh(m::DMesh{2})
+    p, t = as_arrays(m)
 
-    # if :elements in labels
-    #     for (iel,mid) in enumerate(eachrow(elem_mid))
-    #         annotate!(mid[1], mid[2], text("$iel", 8, :center))
-    #     end
-    # end
+    # 1. strict conversion to Float32 Points (GL standard)
+    pts = Point2f[Point2f(col) for col in eachcol(p)]
+    
+    # 2. strict conversion to standard Triangle Faces
+    faces = GLTriangleFace[GLTriangleFace(col...) for col in eachcol(t)]
+    
+    # 3. Create Mesh and compute Normals
+    #    (Required because Makie initializes with normals by default; 
+    #     we must match that type for updates to work)
+    return GeometryBasics.normal_mesh(GeometryBasics.Mesh(pts, faces))
+end
 
-    # return h
+# ---------------------------------------------------------
+# 2. Standard Plot (Static)
+# ---------------------------------------------------------
+
+function GLMakie.plot(m::DMesh{2}; args...) 
+    f, ax = get_canvas()
+    
+    # Standard plot: Clear the axis and draw fresh
+    empty!(ax) 
+    
+    gl_mesh = to_gl_mesh(m)
+    poly!(ax, gl_mesh, color=MESH_COLOR, strokewidth=1)
+    
+    return f
+end
+
+# ---------------------------------------------------------
+# 3. Live Plot (Dynamic / Animation)
+# ---------------------------------------------------------
+
+function DistMesh.live_plot(m::DMesh{2})
+    f, ax = get_canvas()
+    
+    # Always convert the incoming data to the strict GL mesh format
+    gl_mesh = to_gl_mesh(m)
+
+    if isempty(ax.scene.plots)
+        # --- INITIALIZATION ---
+        # If axis is empty, draw for the first time
+        poly!(ax, gl_mesh, color=MESH_COLOR, strokewidth=1)
+        autolimits!(ax)
+    else
+        # --- UPDATE ---
+        # If plot exists, update the Observable in place (Zero Allocation on GPU)
+        plt = ax.scene.plots[1]
+        
+        # We update the first argument of the plot object
+        plt[1][] = gl_mesh
+    end
+    
+    # Yield to the event loop so the window redraws
+    sleep(0.01)
+    
+    return f
 end
 
 end

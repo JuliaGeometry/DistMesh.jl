@@ -1,8 +1,7 @@
 # ## NACA Airfoil Mesh
 
-
 using DistMesh
-using Plots
+using GLMakie
 using StaticArrays
 
 const Point2 = SVector{2, Float64}
