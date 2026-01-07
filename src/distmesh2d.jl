@@ -1,7 +1,7 @@
 ########################################################################
 # Internal Type Aliases
 
-const Point2 = SVector{2, Float64}
+const Point2d = SVector{2, Float64}
 const Index2 = SVector{2, Int32}   # For Edges
 const Index3 = SVector{3, Int32}   # For Triangles
 
@@ -18,7 +18,7 @@ function init_nodes(bbox, h0)
     # Create initial distribution in bounding box (equilateral triangles)
     xx = bbox[1][1]:h0:bbox[2][1]
     yy = bbox[1][2]:h0*√3/2:bbox[2][2]
-    p = [ Point2(x + iseven(iy) * h0/2, y) for x in xx for (iy,y) in enumerate(yy) ]
+    p = [ Point2d(x + iseven(iy) * h0/2, y) for x in xx for (iy,y) in enumerate(yy) ]
 end
 
 function nodes_rejection(p, pfix, dfcn, hfcn, geps)
@@ -58,7 +58,7 @@ function total_node_forces(L, L0, barvec, bars, np, nfix)
     # Find all bar forces and accumulate at all nodes
     F = max.(L0 .- L, 0.0)
     Fvec = F ./ L .* barvec
-    Ftot = [ Point2(0.0,0.0) for ip = 1:np ]
+    Ftot = [ Point2d(0.0,0.0) for ip = 1:np ]
     for ibar in eachindex(bars)
         Ftot[bars[ibar][1]] += Fvec[ibar]
         Ftot[bars[ibar][2]] -= Fvec[ibar]
@@ -70,7 +70,7 @@ end
 function project_nodes!(p, dfcn, deps)
     d = dfcn.(p)
     ix = findall(d .> 0)
-    numgrad(f,x,fx) = (Point2(f(x + Point2(deps,0)), f(x + Point2(0,deps))) .- fx) / deps
+    numgrad(f,x,fx) = (Point2d(f(x + Point2d(deps,0)), f(x + Point2d(0,deps))) .- fx) / deps
     dgrad = [ numgrad(dfcn, p[i], d[i]) for i in ix ]
     @. p[ix] -= d[ix] * dgrad / norm(dgrad)^2
     d
@@ -108,7 +108,7 @@ pfix = [(-1,-1), (-1,1), (1,-1), (1,1)]
 p,t = distmesh2d(dfcn2, hfcn2, 0.05, bbox, pfix, plotting=true);
 ```
 """
-function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2[];
+function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2d[];
                     plotting=false,          # Optional live plotting
                     densityctrlfreq = 30,    # Frequency of density controls
                     maxiter = 10_000,        # When to terminate if no convergence
@@ -122,9 +122,9 @@ function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2[];
                     )
     
     # Initializations
-    pfix = unique(Point2.(pfix))
+    pfix = unique(Point2d.(pfix))
     nfix = length(pfix)
-    pold = [Point2(Inf,Inf)]
+    pold = [Point2d(Inf,Inf)]
     t, bars = Index3[], Index2[]
     converged = false
     
@@ -149,7 +149,7 @@ function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2[];
         # Density control - remove points that are too close to each other
         if iter % densityctrlfreq == 0
             p = density_control(p, L, L0, bars, nfix)
-            pold = [Point2(Inf,Inf)]
+            pold = [Point2d(Inf,Inf)]
             continue
         end
 
