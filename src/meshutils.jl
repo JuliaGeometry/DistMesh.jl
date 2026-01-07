@@ -1,19 +1,9 @@
-#import Plots
+"""
+    huniform(p)
 
-#=
-function simpplot(p, t, tdata=nothing; args...)
-    pxy(d) = [ tix==0 ? NaN : p[tt[tix]][d] for tix in (1,2,3,1,0), tt in t ]
-    args = (args..., seriestype=:shape, aspect_ratio=:equal, leg=false)
-    if isnothing(tdata)
-        args = (args..., fillcolor=Plots.RGB(0.8, 0.9, 1.0))
-    else
-        # todo
-        #data = vcat(tdata[t], fill(NaN, 1, size(t, 2)))[:]
-        #args = (args..., fillcolor=:viridis, fill_z=data, colorbar=:right)
-    end
-    h = Plots.plot(vec(pxy(1)), vec(pxy(2)); args...)
-end
-=#
+Returns `1.0`. Default sizing function for uniform meshes.
+"""
+huniform(p) = 1
 
 function simplex_area(el)
     if length(el) == 3 # Triangle

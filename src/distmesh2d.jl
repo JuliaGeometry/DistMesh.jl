@@ -80,32 +80,63 @@ end
 # Main function
 
 """
-        distmesh2d(dfcn, hfcn, h0, bbox, pfix=[]; plotting=false)
+    distmesh2d(dfcn, hfcn, h0, bbox, pfix=[]; kwargs...) -> (p, t)
 
-2-D Mesh Generator using Distance Functions.
+Generate a 2D unstructured triangular mesh using a signed distance function.
 
-        `p`: Node positions (Vector of (x,y) coordinates)
-        't': Triangle indices (Vector of (i1,i2,i3) indices)
-     'dfcn': Distance function d(p)
-     'hfcn': Scaled edge length function h(p)
-       'h0': Initial edge length
-     'bbox': Bounding box ((xmin,ymin), (xmax,ymax))
-     'pfix': Fixed node positions (Vector of (x,y) coordinates)
+This function implements the DistMesh algorithm (Persson/Strang), which treats the mesh generation 
+as a physical equilibrium problem. A system of truss bars (edges) is relaxed until the force 
+equilibrium is reached, constrained by the signed distance function `dfcn` to stay within the domain.
+
+# Arguments
+- `dfcn::Function`: Signed distance function `d(p)`. Returns negative values inside the region, 
+  positive outside. Input `p` is an `(N,2)` array.
+- `hfcn::Function`: Element size function `h(p)`. Returns target edge length at point `p`.
+- `h0::Real`: Initial nominal edge length (scaling factor for `hfcn`).
+- `bbox`: Bounding box tuple `((xmin, ymin), (xmax, ymax))` defining the initial grid generation area.
+- `pfix::Vector`: (Optional) List of fixed node positions that must be part of the mesh (e.g., corners).
+
+# Keywords
+- `plotting::Bool = false`: Enable live visualization of the relaxation process (requires GLMakie).
+- `maxiter::Int = 1000`: Maximum number of relaxation iterations.
+- `ttol::Real`: Tolerance for retriangulation (defaults to `0.1 * h0`).
+- `dptol::Real`: Termination tolerance for node movement (defaults to `0.001 * h0`).
+
+# Returns
+- `p::Vector{Point2d}`: The node positions.
+- `t::Vector{Index3}`: The triangle connectivity indices.
 
 # Examples
 
-### Example: (Uniform Mesh on Unit Circle)
+**Uniform Mesh on a Unit Circle**
 ```julia
-dfcn(p) = sqrt(sum(p.^2)) - 1
-p,t = distmesh2d(dfcn, huniform, 0.2, ((-1,-1), (1,1)), plotting=true);
+using DistMesh
+# Distance function for a circle of radius 1
+fd = p -> sqrt.(sum(p.^2, dims=2)) .- 1.0
+# Uniform mesh size
+fh = p -> ones(size(p,1))
+
+p, t = distmesh2d(fd, fh, 0.2, ((-1,-1), (1,1)), plotting=false)
 ```
-#### Example: (Rectangle with circular hole, refined at circle boundary)
+
+**Rectangle with Circular Hole (Refined at Boundary)**
 ```julia
-dfcn2(p) = ddiff(drectangle(p, -1, 1, -1, 1), dcircle(p, r=0.5))
-hfcn2(p) = 0.05 + 0.3 * dcircle(p, r=0.5);
+using DistMesh
+
+# Define distance function: Rectangle minus Circle
+function fd_hole(p)
+    d_rect = drectangle(p, -1, 1, -1, 1)
+    d_circ = dcircle(p, 0, 0, 0.5)
+    return ddiff(d_rect, d_circ)
+end
+
+# Size function: Refine near the hole
+fh_hole(p) = 0.05 .+ 0.3 * dcircle(p, 0, 0, 0.5)
+
 bbox = ((-1,-1), (1,1))
-pfix = [(-1,-1), (-1,1), (1,-1), (1,1)]
-p,t = distmesh2d(dfcn2, hfcn2, 0.05, bbox, pfix, plotting=true);
+pfix = [(-1,-1), (-1,1), (1,-1), (1,1)] # Fix corners
+
+p, t = distmesh2d(fd_hole, fh_hole, 0.05, bbox, pfix)
 ```
 """
 function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2d[];
