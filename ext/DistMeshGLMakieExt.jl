@@ -18,7 +18,7 @@ Gets the current figure/axis if they exist, or creates new ones.
 function get_canvas(; aspect=DataAspect())
     fig = current_figure()
     if isnothing(fig)
-        fig = Figure(size=(800, 800))
+        fig = Figure(size=(600, 600))
         ax = Axis(fig[1,1], aspect=aspect)
         return fig, ax
     else

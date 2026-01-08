@@ -6,7 +6,7 @@ using CairoMakie
 const MESH_COLOR = "#DDEEFF"
 
 function CairoMakie.plot(m::DMesh{2}; args...) 
-    f = Figure(size=(800, 800))
+    f = Figure(size=(600, 600))
     ax = Axis(f[1,1], aspect=DataAspect())
     
     p, t = as_arrays(m)
