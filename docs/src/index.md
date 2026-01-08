@@ -2,12 +2,16 @@
 
 **DistMesh.jl** is a Julia generator for unstructured triangular and tetrahedral meshes. It uses [Signed Distance Functions](https://en.wikipedia.org/wiki/Signed_distance_function) (SDFs) to define geometries, enabling the generation of high-quality, isotropic meshes for complex shapes defined by simple mathematical functions.
 
+---
+
 ## Installation
 
 ```julia
 using Pkg
 Pkg.add("DistMesh")
 ```
+
+---
 
 ## Introduction
 
@@ -96,7 +100,19 @@ msh = distmesh2d(fd, fh, hmin, bbox, pfix)
 plot(msh)
 ```
 
+### Implicit Geometry vs Distance Function
+
+### Non-uniform size function
+
+### Randomness and reproducability
+
+### Save/export meshes
+
+---
+
 ## Distance Functions
+
+---
 
 ## Size Functions
 
