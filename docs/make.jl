@@ -11,8 +11,8 @@ master_file  = joinpath(docs_src, "examples.md")
 
 # Define a preprocessing function
 function replace_gl_with_cairo(content)
-    # Replace the specific line "using GLMakie" with "using CairoMakie"
-    return replace(content, "using GLMakie" => "using CairoMakie")
+    setup_cmd = "using CairoMakie; CairoMakie.activate!(type=\"png\", px_per_unit=1); # update_theme!(size=(600, 450))"    
+    return replace(content, "using GLMakie" => setup_cmd)
 end
 
 # Initialize the master "Examples" page
