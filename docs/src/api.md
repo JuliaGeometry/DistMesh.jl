@@ -56,9 +56,16 @@ dnaca
 
 ```
 
-## Mesh utilities: Sizing functions
+## Mesh utilities: Size functions
 
 ```@docs
 huniform
+
+```
+
+## Mesh utilities: General
+
+```@docs
+DistMesh.fixmesh
 
 ```

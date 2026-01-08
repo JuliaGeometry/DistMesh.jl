@@ -57,7 +57,11 @@ p[1:3] # First 3 nodes
 ```
 
 ```@example introduction
-t[1:3] # First 3 triangles
+t[1:3] # First 3 triangles (indices)
+```
+
+```@example introduction
+p[t[1]] # x,y-coordinates of the first triangle
 ```
 
 If you prefer a matrix-based representation (similar to the original MATLAB DistMesh, except transposed), the utility function `as_arrays` creates a zero-allocation view for this. Note that if you modify these matrices, the original versions in `msh` will also be changed!
@@ -69,7 +73,11 @@ p_mat[:,1:3] # First 3 nodes
 ```
 
 ```@example introduction
-t_mat[:,1:3] # First 3 triangles
+t_mat[:,1:3] # First 3 triangles (indices)
+```
+
+```@example introduction
+p_mat[:,t_mat[:,1]] # x,y-coordinates of the first triangle
 ```
 
 If you want separate re-allocated versions of these matrices, use `collect`.
