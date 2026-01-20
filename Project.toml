@@ -1,7 +1,8 @@
 name = "DistMesh"
 uuid = "f7ee28b6-bfbf-11e9-3e31-8961b86f052c"
 version = "0.2.0"
-authors = ["Steve Kelly <kd2cca@gmail.com> and Per-Olof Persson <persson@berkeley.edu"]
+authors = ["Steve Kelly <kd2cca@gmail.com>", "Per-Olof Persson <persson@berkeley.edu>"]
+license = "MIT"
 
 [deps]
 Delaunator = "466f8f70-d5e3-4806-ac0b-a54b75a91218"
