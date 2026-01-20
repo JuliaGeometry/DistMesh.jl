@@ -35,6 +35,7 @@ julia = "1.10"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 
 [targets]
-test = ["Test", "GeometryBasics", "TetGen"]
+test = ["Test", "GeometryBasics", "TetGen", "CairoMakie"]

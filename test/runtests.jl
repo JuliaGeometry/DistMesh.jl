@@ -1,6 +1,42 @@
 using DistMesh
 using Test
 using GeometryBasics
+using CairoMakie
+
+# ------------------------------------------------------------------------------
+# DistMesh 2D Tests
+# ------------------------------------------------------------------------------
+
+const EXAMPLES_DIR = joinpath(@__DIR__, "..", "examples")
+
+@testset "Examples" begin
+    # Get all .jl files
+    files = filter(f -> endswith(f, ".jl"), readdir(EXAMPLES_DIR))
+    
+    for file in files
+        @testset "$file" begin
+            # Read the example file
+            path = joinpath(EXAMPLES_DIR, file)
+            content = read(path, String)
+            
+            # Swap GLMakie -> CairoMakie (for Headless tests)
+            content = replace(content, "using GLMakie" => "using CairoMakie")
+
+            # Run the code
+            try
+                include_string(Main, content, path)
+                @test true 
+            catch e
+                @error "Example $file failed to run" exception=(e, catch_backtrace())
+                @test false
+            end
+        end
+    end
+end
+
+# ------------------------------------------------------------------------------
+# DistMesh ND Tests
+# ------------------------------------------------------------------------------
 
 include("vals.jl")
 
