@@ -88,19 +88,25 @@ If you want separate re-allocated versions of these matrices, use `collect`.
 
 ### Fixed points
 
-An optional argument to `distmesh2d` is `pfix` - a vector of frozen points that are part of the generated mesh. These are typically required for boundaries with sharp corners, since the implicit geometry representation as a signed distance function does not explicitly provide them. Here is a simple example of a mesh of a rectangle, where we include the four corner points in `pfix1`.
+An optional argument to `distmesh2d` is `pfix` - a vector of frozen points that are part of the generated mesh. These are typically required for boundaries with sharp corners, since the implicit geometry representation as a signed distance function does not explicitly provide them. Here is a simple example of a mesh of a rectangle, where we include the four corner points in `pfix`.
 ```@example introduction
 fd(p) = drectangle(p, -1, 1, -1, 1)
 pfix = ((-1,-1), (1,-1), (-1,1), (1,1))
 # fh, hmin, bbox same as before
 msh = distmesh2d(fd, fh, hmin, bbox, pfix)
-```
-
-```@example introduction
 plot(msh)
 ```
 
 ### Implicit Geometry vs Distance Function
+
+Although the original version of DistMesh required actual signed distance functions for the geometry, this condition was relaxed in later versions and the algorithm actually accepts any smooth function with an implicitly defined zero level-set. This can be very convenient when defining non-trivial geometries, e.g. an ellipse with semi-axes 2,1 can now be represented as the zero level-set of $d(x,y)=(x/2)^2 + (y/1)^2 -1$. Note that this is not the actual distance function for the ellipse.
+
+```@example introduction
+fd(p) = (p[1]/2)^2 + (p[2]/1)^2 - 1
+bbox = ((-2,-1), (2,1))
+msh = distmesh2d(fd, huniform, 0.2, bbox)
+plot(msh)
+```
 
 ### Non-uniform size function
 
