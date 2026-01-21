@@ -66,6 +66,8 @@ huniform
 ## Mesh utilities: General
 
 ```@docs
-DistMesh.fixmesh
+element_volumes
+element_qualities
+cleanup_mesh
 
 ```

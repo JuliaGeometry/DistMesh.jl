@@ -25,9 +25,9 @@ function check_mesh(msh::DMesh; np::Int=0, nt::Int=0, area::Real=0.0, areatol::R
         nt > 0 && @test length(msh.t) == nt
 
         # 2. Compute Geometric Properties
-        total_area = sum(simpvol(msh))
-        min_q = minimum(simpqual(msh))
-        has_negative_area = minimum(simpvol(msh)) < 0.0
+        total_area = sum(element_volumes(msh))
+        min_q = minimum(element_qualities(msh))
+        has_negative_area = minimum(element_volumes(msh)) < 0.0
 
         # 3. Check Winding / Topology
         @test !has_negative_area

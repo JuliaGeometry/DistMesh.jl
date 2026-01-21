@@ -33,36 +33,89 @@ Returns `1.0`. Default sizing function for uniform meshes.
 """
 huniform(p) = 1
 
+
 ################################################################################
 ### Element properties
 ################################################################################
 
-function simplex_area(el)
-    if length(el) == 3 # Triangle
+"""
+    element_volume(el)
+
+Compute the generalized volume (area in 2D, volume in 3D) of a single element.
+`el` is a vector of coordinates (e.g. [[x1, y1], [x2, y2], [x3, y3]]).
+"""
+function element_volume(el)
+    # Generic simplex handling could go here later.
+    # For now, explicit checks for standard shapes:
+    
+    if length(el) == 3 # Triangle (2D)
         p12 = el[2] - el[1]
         p13 = el[3] - el[1]
         return (p12[1] * p13[2] - p12[2] * p13[1]) / 2
+        
+    elseif length(el) == 4 # Tetrahedron (3D)
+        error("3D Tetrahedra not yet implemented")
+        
+    elseif length(el) == 4 && length(el[1]) == 2 # Example: Quad (2D) logic check
+        # Quad logic
+        error("2D Quadrilaterals not yet implemented")
+        
     else
-        @assert "Dimension not implemented"
+        error("Element type or dimension not supported")
     end
 end
 
-function simplex_qual(el)
+"""
+    element_quality(el)
+
+Compute a quality metric for a single element (normalized 0.0 to 1.0).
+Currently implements 2*r/R (radius ratio) for triangles.
+"""
+function element_quality(el)
     if length(el) == 3 # Triangle
-        norm(vec) = sqrt(sum(vec.^2))
-        a,b,c = ( norm(el[ix[2]] - el[ix[1]]) for ix in ((1,2),(2,3),(3,1)) )
-        r = 0.5*sqrt((b+c-a) * (c+a-b) * (a+b-c) / (a+b+c))
-        R = a*b*c / sqrt((a+b+c) * (b+c-a) * (c+a-b) * (a+b-c))
-        return 2*r/R
+        # Lengths of the three edges
+        a = norm(el[2] - el[1])
+        b = norm(el[3] - el[2])
+        c = norm(el[1] - el[3])
+        
+        # Semiperimeter
+        s = (a + b + c) / 2
+        
+        # Area (Heron's formula) for inradius calculation
+        # area = sqrt(s * (s-a) * (s-b) * (s-c))
+        # r = area / s
+        # R = a*b*c / (4*area)
+        # Quality = 2*r/R
+        
+        # Simplified equivalent formula:
+        denom = (a * b * c)
+        if denom ≈ 0
+             return 0.0
+        end
+        
+        numerator = (b + c - a) * (c + a - b) * (a + b - c)
+        return 8 * (s - a) * (s - b) * (s - c) / (a * b * c) 
     else
-        @assert "Dimension not implemented"
+         error("Dimension not implemented")
     end
 end
 
-elemwise_feval(m::DMesh, f) = [ f(m.p[tt]) for tt in m.t ]
+# Helper to map a function over all elements
+_map_elements(m::DMesh, f) = [f(m.p[indices]) for indices in m.t]
 
-simpqual(m::DMesh, fqual=simplex_qual) = elemwise_feval(m, fqual)
-simpvol(m::DMesh) = elemwise_feval(m, simplex_area)
+"""
+    element_qualities(m::DMesh, quality_func=element_quality)
+
+Return a vector of quality metrics for every element in the mesh.
+"""
+element_qualities(m::DMesh, f=element_quality) = _map_elements(m, f)
+
+"""
+    element_volumes(m::DMesh)
+
+Return a vector of volumes (or areas) for every element in the mesh.
+"""
+element_volumes(m::DMesh) = _map_elements(m, element_volume)
 
 ################################################################################
 ### General mesh utilities
@@ -74,7 +127,7 @@ snap(x::T, scaling=1, tol=sqrt(eps(T))) where {T <: AbstractFloat} =
 
 
 """
-    fixmesh(msh::DMesh) -> (msh::DMesh, ix::Vector{Int})
+    cleanup_mesh(msh::DMesh) -> (msh::DMesh, ix::Vector{Int})
 
 Remove duplicate nodes from the mesh `msh` and re-index the connectivity.
 
@@ -92,12 +145,12 @@ A `NamedTuple` `(msh, ix)` where:
 
 # Example
 ```julia
-clean_msh, = fixmesh(dirty_msh)  # Ignoring the index output (ix)
+clean_msh, = cleanup_mesh(dirty_msh)  # Ignoring the index output (ix)
 
 ```
 
 """
-function fixmesh(msh::DMesh)
+function cleanup_mesh(msh::DMesh)
     p, t = msh
 
     # 1. Snap nodes to a grid to identify duplicates (relative tolerance)

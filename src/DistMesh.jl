@@ -28,7 +28,7 @@ export ddiff, dunion, dintersect
 export huniform
 export naca_coeffs, dnaca
 
-export simpqual, simpvol, fixmesh
+export element_qualities, element_volumes, cleanup_mesh
 
 # Legacy API (Re-exports)
 export distmeshnd, DistMeshSetup, DistMeshStatistics, HUniform
