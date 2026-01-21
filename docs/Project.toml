@@ -3,3 +3,6 @@ DistMesh = "f7ee28b6-bfbf-11e9-3e31-8961b86f052c"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+
+[compat]
+CairoMakie = "0.15"

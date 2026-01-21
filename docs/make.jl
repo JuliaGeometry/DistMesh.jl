@@ -9,6 +9,11 @@ examples_dir = joinpath(@__DIR__, "..", "examples")
 docs_src     = joinpath(@__DIR__, "src")
 master_file  = joinpath(docs_src, "examples.md")
 
+# Define a preprocessing function
+function replace_gl_with_cairo(content)
+    return replace(content, "using GLMakie" => "using CairoMakie")
+end
+
 # Initialize the master "Examples" page
 open(master_file, "w") do io
     write(io, "# Examples\n\nA collection of 2D meshing examples. Note that all the codes are available in the `examples` directory.\n\n")
@@ -31,7 +36,8 @@ for file in jl_files
     Literate.markdown(dest_path, docs_src; 
         documenter=true, 
         credit=false,
-        name=replace(file, ".jl"=>"")
+        name=replace(file, ".jl"=>""),
+        preprocess = replace_gl_with_cairo
     )
     
     # 3. Read the generated markdown

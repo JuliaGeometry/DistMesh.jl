@@ -29,7 +29,7 @@ The code below demonstrates how to implement this using DistMesh in Julia.
 
 ```@example introduction
 using DistMesh
-using GLMakie                # or Plots, or CairoMakie (optional)
+using CairoMakie             # or Plots, or GLMakie (optional)
 
 fd(p) = sqrt(sum(p.^2)) - 1  # or dcircle(p) - unit circle geometry
 fh(p) = 1.0                  # or huniform(p) - uniform size function
