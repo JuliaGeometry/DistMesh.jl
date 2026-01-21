@@ -4,6 +4,7 @@ DistMesh = "f7ee28b6-bfbf-11e9-3e31-8961b86f052c"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Literate = "98b081ad-f1c9-55d3-8b20-4c87d4299306"
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
 
 [compat]
 CairoMakie = "0.15"
