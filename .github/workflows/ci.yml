@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - master
+      - 'v0.2-revamp'
     tags: '*'
 jobs:
   test:
@@ -47,7 +48,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: julia-actions/setup-julia@v1
+      - uses: julia-actions/setup-julia@v2
         with:
           version: '1'
       - run: |
