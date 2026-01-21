@@ -113,7 +113,7 @@ struct HUniform end
 
 include("diff.jl")
 include("pointdistribution.jl")
-include("distmeshnd.jl")
+include("core.jl")
 include("tetgen.jl")
 include("quality.jl")
 include("decompositions.jl")
