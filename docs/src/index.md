@@ -110,15 +110,95 @@ plot(msh)
 
 ### Non-uniform size function
 
+For non-uniform element sizes, we provide a (relative) size function $h(x,y)$. In general, it is best to make this an absolute size function that gives the actual desired edge lengths at point $x,y$. To achieve this, you set the initial edge lengths `hmin` to the smallest value of $h(x,y)$ in the domain.
+
+For example, to set the element sizes to $h_\mathrm{min}$ at a source and let the element sizes increase exponentially away from the source, we use a *linearly growing* size function $h(x,y) = h_\mathrm{min} + 0.3d(x,y)$ where $d(x,y)$ is the distance function of the source.
+
+```@example introduction
+# Point source
+hmin = 0.01
+fh(p) = hmin + 0.3 * dcircle(p, r=0)
+msh = distmesh2d(dcircle, fh, hmin, ((-1,-1), (1,1)))
+plot(msh)
+```
+
+Multiple size function sources can be combined using the `min` function:
+
+```@example introduction
+# Point and line sources
+fd(p) = drectangle(p, 0, 1, 0, 1)
+fh(p) = min(min(0.01 + 0.3*abs(dcircle(p, r=0)),
+                0.025 + 0.3*abs(dpoly(p, [(0.3,0.7), (0.7,0.5)]))),
+            0.15)
+msh = distmesh2d(fd, fh, 0.01, ((0,0), (1,1)), ((0,0), (1,0), (0,1), (1,1)))
+plot(msh)
+```
+
 ### Randomness and reproducability
+
+The DistMesh algorithm is notoriously *chaotic*, or initial value sensitive. This means that very small perturbations in the mesh calculations can grow to large changes in the mesh (that is, completely different meshes). Having said that, running on the same deterministic computer, if you repeat a `distmesh2d` call twice with uniform size functions, it usually gives two identical meshes:
+
+```@example introduction
+msh1 = distmesh2d(dcircle, huniform, 0.2, ((-1,-1), (1,1)))
+msh2 = distmesh2d(dcircle, huniform, 0.2, ((-1,-1), (1,1)))
+println(msh1.p == msh2.p)
+println(msh1.t == msh2.t)
+```
+
+However, for non-uniform size functions, DistMesh uses the `rand` function for the initial point distribution. This means two meshes with identical inputs will in general not be the same:
+
+```@example introduction
+fh(p) = 0.01 + 0.3 * dcircle(p, r=0)
+msh1 = distmesh2d(dcircle, fh, 0.01, ((-1,-1), (1,1)))
+msh2 = distmesh2d(dcircle, fh, 0.01, ((-1,-1), (1,1)))
+display(msh1)
+display(msh2)
+```
+
+Many times this is undesirable, e.g. for reproducability, debugging, etc. You can then seed the random number generator to make the meshes identical:
+
+```@example introduction
+using Random
+fh(p) = 0.01 + 0.3 * dcircle(p, r=0)
+Random.seed!(1234)
+msh1 = distmesh2d(dcircle, fh, 0.01, ((-1,-1), (1,1)))
+Random.seed!(1234)
+msh2 = distmesh2d(dcircle, fh, 0.01, ((-1,-1), (1,1)))
+display(msh1)
+display(msh2)
+println(msh1.p == msh2.p)
+println(msh1.t == msh2.t)
+```
 
 ### Save/export meshes
 
+DistMesh does not provide any mesh export functionality to external programs. However, it is easy to write specialized routines e.g. based on text files. A common format is to have an initial line with information such as number of nodes and number of elements, then comma-separated rows with all the node positions and then the element connectivities:
+
+```@example introduction
+using DelimitedFiles
+function savemesh(msh::DMesh, fname)
+    open(fname, "w") do io
+        p,t = as_arrays(msh)
+        println(io, "$(length(p)) $(length(t)) # nbr_nodes nbr_elems")
+        writedlm(io, p', ',')
+        writedlm(io, t', ',')
+    end
+end
+
+msh = distmesh2d(dcircle, huniform, 0.2, ((-1,-1), (1,1)))
+fname = tempdir() * "/mesh.dat"
+savemesh(msh, fname)
+println("Mesh saved to file $fname")
+```
+
 ---
 
-## Distance Functions
+## More about Distance Functions
+
+TODO
 
 ---
 
-## Size Functions
+## More about Size Functions
 
+TODO

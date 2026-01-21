@@ -85,18 +85,17 @@ as a physical equilibrium problem. A system of truss bars (edges) is relaxed unt
 equilibrium is reached, constrained by the signed distance function `dfcn` to stay within the domain.
 
 # Arguments
-- `dfcn::Function`: Signed distance function `d(p)`. Returns negative values inside the region, 
-  positive outside. Input `p` is an `(N,2)` array.
+- `dfcn::Function`: Signed distance function `d(p)`. Returns negative values inside the region,
+  positive outside. The input `p` is a 2-element coordinate vector (e.g., `Vector`, `Tuple`, or `SVector`).
 - `hfcn::Function`: Element size function `h(p)`. Returns target edge length at point `p`.
 - `h0::Real`: Initial nominal edge length (scaling factor for `hfcn`).
 - `bbox`: Bounding box tuple `((xmin, ymin), (xmax, ymax))` defining the initial grid generation area.
 - `pfix::Vector`: (Optional) List of fixed node positions that must be part of the mesh (e.g., corners).
 
 # Keywords
-- `plotting::Bool = false`: Enable live visualization of the relaxation process (requires GLMakie).
-- `maxiter::Int = 1000`: Maximum number of relaxation iterations.
-- `ttol::Real`: Tolerance for retriangulation (defaults to `0.1 * h0`).
-- `dptol::Real`: Termination tolerance for node movement (defaults to `0.001 * h0`).
+- `plotting::Bool = false`: Enable live visualization of the relaxation process (Plots or GLMakie).
+- `maxiter::Int = 10_000`: Maximum number of relaxation iterations.
+- Several other parameters that are rarely modified
 
 # Returns
 - `p::Vector{Point2d}`: The node positions.
@@ -107,33 +106,61 @@ equilibrium is reached, constrained by the signed distance function `dfcn` to st
 **Uniform Mesh on a Unit Circle**
 ```julia
 using DistMesh
-# Distance function for a circle of radius 1
-fd = p -> sqrt.(sum(p.^2, dims=2)) .- 1.0
-# Uniform mesh size
-fh = p -> ones(size(p,1))
 
-p, t = distmesh2d(fd, fh, 0.2, ((-1,-1), (1,1)), plotting=false)
+fd(p) = sqrt(sum(p.^2)) - 1  # or dcircle(p) - unit circle geometry
+fh(p) = 1.0                  # or huniform(p) - uniform size function
+hmin  = 0.2                  # initial edge lengths
+bbox  = ((-1,-1), (1,1))     # bounding box for unit circle
+
+msh = distmesh2d(fd, fh, hmin, bbox)
+
+# Optionally, the mesh can be visualized using various plotting packages:
+using GLMakie # or Plots, or CairoMakie
+plot(msh)
 ```
 
 **Rectangle with Circular Hole (Refined at Boundary)**
 ```julia
 using DistMesh
-
-# Define distance function: Rectangle minus Circle
-function fd_hole(p)
-    d_rect = drectangle(p, -1, 1, -1, 1)
-    d_circ = dcircle(p, 0, 0, 0.5)
-    return ddiff(d_rect, d_circ)
-end
-
-# Size function: Refine near the hole
-fh_hole(p) = 0.05 .+ 0.3 * dcircle(p, 0, 0, 0.5)
-
-bbox = ((-1,-1), (1,1))
-pfix = [(-1,-1), (-1,1), (1,-1), (1,1)] # Fix corners
-
-p, t = distmesh2d(fd_hole, fh_hole, 0.05, bbox, pfix)
+hmin = 0.05
+fd(p) = ddiff(drectangle(p, -1, 1, -1, 1), dcircle(p, r=0.5))
+fh(p) = hmin + 0.3*dcircle(p, r=0.5)
+msh = distmesh2d(fd, fh, hmin, ((-1,-1), (1,1)), ((-1,-1), (-1,1), (1,-1), (1,1))) 
 ```
+
+**Polygon**
+```julia
+using DistMesh
+pv = [(-0.4, -0.5), (0.4, -0.2), (0.4, -0.7), (1.5, -0.4),
+      (0.9, 0.1), (1.6, 0.8), (0.5, 0.5), (0.2, 1.0),
+      (0.1, 0.4), (-0.7, 0.7), (-0.4, -0.5)]
+fd(p) = dpoly(p, pv)
+bbox = ((-1,-1), (2,1))
+h0 = 0.15
+msh = distmesh2d(fd, huniform, h0, bbox, pv)
+```
+
+**Ellipse**
+```julia
+using DistMesh
+fd(p) = (p[1]/2)^2 + (p[2]/1)^2 - 1
+bbox = ((-2,-1), (2,1))
+msh = distmesh2d(fd, huniform, 0.2, bbox)
+```
+
+**Square, with size function point and line sources**
+```julia
+using DistMesh
+fd(p) = drectangle(p, 0, 1, 0, 1)
+fh(p) = min(min(0.01 + 0.3*abs(dcircle(p, r=0)),
+                0.025 + 0.3*abs(dpoly(p, [(0.3,0.7), (0.7,0.5)]))),
+            0.15)
+msh = distmesh2d(fd, fh, 0.01, ((0,0), (1,1)), ((0,0), (1,0), (0,1), (1,1)))
+```
+
+**NACA0012 airfoil**
+
+See `examples/002-naca_airfoil.jl`
 """
 function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2d[];
                     plotting=false,          # Optional live plotting
