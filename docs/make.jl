@@ -11,7 +11,7 @@ master_file  = joinpath(docs_src, "examples.md")
 
 # Initialize the master "Examples" page
 open(master_file, "w") do io
-    write(io, "# Examples\n\nA collection of 2D meshing examples.\n\n")
+    write(io, "# Examples\n\nA collection of 2D meshing examples. Note that all the codes are available in the `examples` directory.\n\n")
 end
 
 # Find all .jl files and sort them

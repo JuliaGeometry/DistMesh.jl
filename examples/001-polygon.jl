@@ -1,30 +1,28 @@
 # ## Polygon Mesh
-#
-# This example demonstrates how to mesh a custom polygon using `dpoly`.
 
 using DistMesh
 using GLMakie
 
-# ### 1. Define Vertices
+# First, define the vertices of the polygon as a list of points (tuples)
 pv = [(-0.4, -0.5), (0.4, -0.2), (0.4, -0.7), (1.5, -0.4),
       (0.9, 0.1), (1.6, 0.8), (0.5, 0.5), (0.2, 1.0),
-      (0.1, 0.4), (-0.7, 0.7), (-0.4, -0.5)]
+      (0.1, 0.4), (-0.7, 0.7), (-0.4, -0.5)];
 
-# ### 2. Create Distance Function
-# `dpoly` computes the distance from points `p` to the polygon defined by `pv`.
-# We wrap it in a new function because `distmesh2d` expects a function of `p`.
+# Next, use the `dpoly` function and these vertices to define the distance function
 fd(p) = dpoly(p, pv)
 
-# ### 3. Generate Mesh
-# We use a uniform mesh size of h0 = 0.1. 
-# The bounding box must enclose the polygon.
+# We use a uniform mesh size function, with a given desired edge length
+hmin = 0.15
+fh = huniform
 
+# DistMesh also needs a bounding box, which must enclose the polygon
 bbox = ((-1,-1), (2,1))
-h0 = 0.15
 
-msh = distmesh2d(fd, huniform, h0, bbox, pv)
+# Sharp corners have to be provided in the `pfix` argument
+pfix = pv
 
-# ### 4. Visualize
-# Plot the resulting mesh.
+# Generate the mesh
+msh = distmesh2d(fd, fh, hmin, bbox, pfix)
 
+# Finally, plot the resulting mesh
 plot(msh)
