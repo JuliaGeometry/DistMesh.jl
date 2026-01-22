@@ -30,6 +30,7 @@ The code below demonstrates how to implement this using DistMesh in Julia.
 ```@example introduction
 using DistMesh
 using CairoMakie             # or Plots, or GLMakie (optional)
+CairoMakie.activate!(type="png", px_per_unit=1.0) # hide
 
 fd(p) = sqrt(sum(p.^2)) - 1  # or dcircle(p) - unit circle geometry
 fh(p) = 1.0                  # or huniform(p) - uniform size function

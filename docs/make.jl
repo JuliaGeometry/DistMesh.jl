@@ -11,9 +11,10 @@ master_file  = joinpath(docs_src, "examples.md")
 
 # Define a preprocessing function
 function replace_gl_with_cairo(content)
-    return replace(content, "using GLMakie" => "using CairoMakie")
+    return replace(content, "using GLMakie" => "using CairoMakie\nCairoMakie.activate!(type=\"png\", px_per_unit=1.0); # hide")
 end
-
+# update_theme!(size=(600, 450))   # For setting figure size instead of px_per_unit
+                     
 # Initialize the master "Examples" page
 open(master_file, "w") do io
     write(io, "# Examples\n\nA collection of 2D meshing examples. Note that all the codes are available in the `examples` directory.\n\n")
