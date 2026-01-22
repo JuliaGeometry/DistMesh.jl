@@ -6,7 +6,6 @@ The primary interface for generating meshes and handling the resulting data stru
 
 ```@docs
 distmesh2d
-distmesh
 DMesh
 as_arrays
 

@@ -1,15 +1,13 @@
 name = "DistMesh"
 uuid = "f7ee28b6-bfbf-11e9-3e31-8961b86f052c"
 version = "0.2.0"
-authors = ["Steve Kelly <kd2cca@gmail.com>", "Per-Olof Persson <persson@berkeley.edu>"]
+authors = ["Per-Olof Persson <persson@berkeley.edu>"]
 license = "MIT"
 
 [deps]
 Delaunator = "466f8f70-d5e3-4806-ac0b-a54b75a91218"
-GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
-TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
 
 [weakdeps]
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
@@ -25,18 +23,14 @@ DistMeshPlotsExt = "Plots"
 CairoMakie = "0.15"
 Delaunator = "0.1"
 GLMakie = "0.11, 0.12, 0.13"
-GeometryBasics = "0.5"
 LinearAlgebra = "1"
 Plots = "1"
 StaticArrays = "1.9"
-TetGen = "2"
 julia = "1.10"
 
 [extras]
-GeometryBasics = "5c1252a2-5f33-56bf-86c9-59e7332b4326"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
-TetGen = "c5d3f3f7-f850-59f6-8a2e-ffc6dc1317ea"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 
 [targets]
-test = ["Test", "GeometryBasics", "TetGen", "CairoMakie"]
+test = ["Test", "CairoMakie"]

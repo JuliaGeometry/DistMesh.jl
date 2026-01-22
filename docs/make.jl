@@ -61,12 +61,11 @@ end
 makedocs(
     sitename = "DistMesh.jl",
     modules  = [DistMesh],
-    authors  = "Steve Kelly <kd2cca@gmail.com> and Per-Olof Persson <persson@berkeley.edu>",
+    authors  = "Per-Olof Persson <persson@berkeley.edu>",
     pages    = [
         "Home" => "index.md",
         "Examples" => "examples.md",
-        "API Reference" => "api.md",
-        "Legacy (N-D & Theory)" => "distmeshnd.md",
+        "API Reference" => "api.md"
     ],
     warnonly = [:missing_docs],
     format = Documenter.HTML(

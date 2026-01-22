@@ -9,7 +9,19 @@ Primary use cases include Finite Element Analysis (FEA), computational fluid dyn
 
 ---
 
-## Quick Start (2D)
+## Note on Version 0.2.0
+
+Version 0.2.0 represents a major rewrite of `DistMesh.jl`, focusing on replicating the original 2D code but with better performance, native Julia implementations, and integration with the Makie/Plots ecosystems. **This version is now fully MIT licensed.**
+
+**Legacy Support:** The original N-dimensional meshing code port has been retired in this version to allow for a cleaner architecture. If you require the legacy `distmeshnd` functionality, please pin your package version to v0.1:
+
+```julia
+] add DistMesh@0.1
+```
+
+---
+
+## Quick Start
 
 The core function `distmesh2d` generates a mesh based on a distance function, a relative size function, an initial edge length, and a bounding box.
 
@@ -40,22 +52,12 @@ For more details and extensive examples, please see the [DistMesh documentation]
 
 ---
 
-## 3D Support & Legacy Code
-
-The original versions of this package featured an N-dimensional implementation (`distmeshnd`) which supports 3D generation. This functionality is still available via the internal `DistMeshND` module.
-
-Please note that the modern 2D functionality has been rewritten independently to prioritize performance and type stability. Consequently, the API style for 3D generation differs from the 2D interface. Future work will focus on harmonizing these implementations.
-
----
-
 ## Background
 
 This package is a Julia port of the [DistMesh](http://persson.berkeley.edu/distmesh/) algorithm developed by [Per-Olof Persson](http://persson.berkeley.edu/). Significant improvements have been made to performance and type stability compared to the original MATLAB implementation. The algorithm is described in the following publications:
 
 * P.-O. Persson, G. Strang, *[A Simple Mesh Generator in MATLAB](https://persson.berkeley.edu/distmesh/persson04mesh.pdf)*. SIAM Review, Volume 46 (2), pp. 329-345, June 2004.
 * P.-O. Persson, *[Mesh Generation for Implicit Geometries](https://persson.berkeley.edu/thesis/persson-thesis-color.pdf)*. Ph.D. thesis, Department of Mathematics, MIT, Dec 2004.
-
-Details on the implementation of the legacy N-dimensional generator can be found in this [technical report](https://sjkellyorg.files.wordpress.com/2020/11/distmesh_sjkelly.pdf).
 
 ---
 
