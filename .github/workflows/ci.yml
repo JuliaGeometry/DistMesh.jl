@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - master
+      - 'v0.2-revamp'
     tags: '*'
 jobs:
   test:
