@@ -40,7 +40,7 @@ function dm_naca(; hlead=0.01, htrail=0.04, hmax=2.0, circx=2.0, circr=4.0)
     ## Size function: Given by `hnaca` above
     hfcn(p) = hnaca(p; hlead=hlead, htrail=htrail, hmax=hmax)
 
-    ## Fix points: Add symmetry points for the circle plus the once from `fixnaca`
+    ## Fix points: Add symmetry points for the circle plus the ones from `fixnaca`
     fix = Point2d[(1,0),(0,1),(-1,0),(0,-1)] .* circr .+ Point2d[(circx,0)]
     fix = vcat(fix, fixnaca(htrail=htrail))
 
