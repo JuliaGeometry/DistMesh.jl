@@ -13,7 +13,7 @@ const Point2d = SVector{2, Float64}
 
 # First, we define the size function for the NACA airfoil. It consists of the minimum of several point sources and constants:
 # * A point source at the tip of the airfoil, with size `hlead`
-# * A point source at the traling edge of the airfoil, with size `htrail`
+# * A point source at the trailing edge of the airfoil, with size `htrail`
 # * A maximum element size in the entire domain `hmax`
 
 function hnaca(p; hlead=0.01, htrail=0.04, hmax=2.0)
