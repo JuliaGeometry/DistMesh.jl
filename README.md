@@ -46,7 +46,7 @@ using GLMakie # or Plots, or CairoMakie
 plot(msh)
 ```
 
-![Triangular mesh of the unit circle](circle_mesh.png)
+![Triangular mesh of the unit circle](docs/src/assets/circle_mesh.png)
 
 For more details and extensive examples, please see the [DistMesh documentation](https://distmesh.juliageometry.org).
 
