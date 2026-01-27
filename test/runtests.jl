@@ -1,113 +1,85 @@
 using DistMesh
 using Test
-using GeometryBasics
+using CairoMakie
 
-include("vals.jl")
+# ------------------------------------------------------------------------------
+# DistMesh 2D Tests
+# ------------------------------------------------------------------------------
 
+"""
+    check_mesh(p, t; np, nt, area, areatol, minqual)
 
+Validates a 2D mesh against expected properties.
+- `np`: Expected number of nodes.
+- `nt`: Expected number of triangles.
+- `area`: Expected total area of the domain.
+- `areatol`: Tolerance for total area check.
+- `minqual`: Minimum allowable triangle quality (0.0 to 1.0).
+"""
+function check_mesh(msh::DMesh; np::Int=0, nt::Int=0, area::Real=0.0, areatol::Real=1e-6, minqual::Real=0.1)
+    @testset "Mesh Validation" begin
+        
+        # 1. Check Counts
+        np > 0 && @test length(msh.p) == np
+        nt > 0 && @test length(msh.t) == nt
 
-@testset "point distributions" begin
-    vlen(a,b) = sqrt(sum((a-b).^2))
-    @testset "simple cubic" begin
-        pts = []
-        dists = []
-        f(x) = -1
-        DistMesh.simplecubic!(f, pts, dists, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
-        @test length(pts) == 27
-        @test length(dists) == 27
-        @test isapprox(vlen(pts[1],pts[2]),0.5)
-        @test length(pts) == length(unique(pts))
-    end
+        # 2. Compute Geometric Properties
+        total_area = sum(element_volumes(msh))
+        min_q = minimum(element_qualities(msh))
+        has_negative_area = minimum(element_volumes(msh)) < 0.0
 
-    @testset "face centered cubic" begin
-        pts = []
-        dists = []
-        f(x) = -1
-        DistMesh.facecenteredcubic!(f, pts, dists, 0.5, 0, Point{3,Float64}(0),Point{3,Float64}(1),Point{3,Float64})
-        @test length(pts) == 216
-        @test length(dists) == 216
-        @test isapprox(vlen(pts[1],pts[2]),0.5)
-        @test length(pts) == length(unique(pts))
-    end
+        # 3. Check Winding / Topology
+        @test !has_negative_area
 
-end
+        # 4. Check Total Area
+        area > 0.0 && @test isapprox(total_area, area, atol=areatol)
 
-@testset "quality analysis" begin
-    @testset "triangles" begin
-        @test DistMesh.triqual([0,0,0],[1,0,0],[0,1,0]) == DistMesh.triqual([0,0,0],[2,0,0],[0,2,0])
-        @test DistMesh.triqual([0,0,0],[1,0,1],[0,1,1]) == DistMesh.triqual([0,0,0],[2,0,2],[0,2,2])
-        @test DistMesh.triqual([0,0,0],[2,0,0],[1,sqrt(3),0]) ≈ 1
-        @test DistMesh.triqual([0,0,0],[1,sqrt(3),0],[2,0,0]) ≈ 1
-    end
-    @testset "volume-length" begin
-        pts = ([1,0,-1/sqrt(2)], [-1,0,-1/sqrt(2)], [0,1,1/sqrt(2)], [0,-1,1/sqrt(2)])
-        pts2 = ([1,1,1], [1,-1,-1], [-1,1,-1], [-1,-1,1])
-        pts_degenerate = ([1,1,1], [1,1,1], [-1,1,-1], [-1,-1,1])
-        @test DistMesh.volume_edge_ratio(pts...) ≈ 1
-        @test DistMesh.volume_edge_ratio((pts.*2)...) ≈ 1
-        @test DistMesh.volume_edge_ratio((pts.*1e-6)...) ≈ 1
-        @test isnan(DistMesh.volume_edge_ratio((pts.*0)...))
-        @test DistMesh.volume_edge_ratio(pts2...) ≈ 1
-        @test DistMesh.volume_edge_ratio((pts2.*2)...) ≈ 1
-        @test DistMesh.volume_edge_ratio(pts_degenerate...) == 0
-
+        # 5. Check Element Quality
+        @test min_q >= minqual
     end
 end
 
-@testset "decompositions" begin
-    @testset "tets to triangles" begin
-        simps = [[4,3,2,1],[5,4,3,2],[1,2,3,4]]
-        tris = Tuple{Int,Int,Int}[]
-        DistMesh.tets_to_tris!(tris,simps)
-        @test tris == [(1, 2, 3), (1, 2, 4), (1, 3, 4), (2, 3, 4), (2, 3, 5), (2, 4, 5), (3, 4, 5)]
+@testset "Unit Circle Mesh" begin
+    msh = distmesh2d(dcircle, huniform, 0.2, ((-1,-1), (1,1)))
+    check_mesh(msh, np=88, nt=143)
+    
+    for h in (0.01, 0.02, 0.05, 0.10, 0.15, 0.2)
+        msh = distmesh2d(dcircle, huniform, h, ((-1,-1), (1,1)))
+        check_mesh(msh,
+                   area=pi, 
+                   areatol=h^2, # Not an exact circle
+                   minqual=0.6
+                   )
     end
 end
 
-@testset "hilbert sort" begin
-    rng = 0:0.3:1
-    a = Vector{Vector{Float64}}(undef,length(rng)^3)
-    i = 1
-    for xi in rng, yi in rng, zi in rng
-        a[i] = [xi,yi,zi]
-        i += 1
+
+# ------------------------------------------------------------------------------
+# Run all scripts in the examples/ directory
+
+const EXAMPLES_DIR = joinpath(@__DIR__, "..", "examples")
+
+@testset "Examples" begin
+    # Get all .jl files
+    files = filter(f -> endswith(f, ".jl"), readdir(EXAMPLES_DIR))
+    
+    for file in files
+        @testset "$file" begin
+            # Read the example file
+            path = joinpath(EXAMPLES_DIR, file)
+            content = read(path, String)
+            
+            # Swap GLMakie -> CairoMakie (for Headless tests)
+            content = replace(content, "using GLMakie" => "using CairoMakie")
+
+            # Run the code
+            try
+                include_string(Main, content, path)
+                @test true 
+            catch e
+                @error "Example $file failed to run" exception=(e, catch_backtrace())
+                @test false
+            end
+        end
     end
-    DistMesh.hilbertsort!(a)
-    @test a == hilbert_a
-end
-
-@testset "distmesh 3D" begin
-    d(p) = sqrt(sum(p.^2))-1
-    result = distmesh(d,HUniform(),0.2)
-    @test length(result.points) == 485
-    @test length(result.tetrahedra) == 2207
-
-    result = distmesh(d,HUniform(),0.2, DistMeshSetup(distribution=:packed))
-    @test length(result.points) == 742
-    @test length(result.tetrahedra) == 3472
-
-    # test stats is not messing
-    result = distmesh(d,HUniform(),0.2, stats=true)
-    @test length(result.points) == 485
-    @test length(result.tetrahedra) == 2207
-
-    result = distmesh(d,HUniform(),0.4, stats=true)
-    @test length(result.points) == 56
-    @test length(result.tetrahedra) == 186
-    #for fn in fieldnames(typeof(result.stats))
-    #    @test isapprox(getproperty(result.stats,fn), getproperty(stat_04,fn))
-    #end
-end
-
-@testset "dihedral metrics" begin
-    d(p) = sqrt(sum(p.^2))-1
-    result = distmesh(d,HUniform(),0.2)
-    p = result.points
-    t = result.tetrahedra
-    all_angs =  DistMesh.dihedral_angles(p,t)
-    min_angs =  DistMesh.min_dihedral_angles(p,t)
-    ax = extrema(all_angs)
-    mx = extrema(min_angs)
-    @test ax[1] == mx[1]
-    @test all(ax .≈ (0.023502688273828173, 3.104396619996953))
-    @test all(mx .≈ (0.023502688273828173, 1.2044902180168893))
 end

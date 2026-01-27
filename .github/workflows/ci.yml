@@ -3,10 +3,10 @@ env:
   JULIA_NUM_THREADS: 2
 on:
   push:
-    branches: [master]
-    tags: ['*']
-  pull_request:
-  workflow_dispatch:
+    branches:
+      - master
+      - 'v0.2-revamp'
+    tags: '*'
 jobs:
   test:
     name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }} - ${{ github.event_name }}
