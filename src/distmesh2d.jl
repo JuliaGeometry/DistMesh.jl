@@ -215,7 +215,7 @@ function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2d[];
         d = project_nodes!(p, dfcn, deps)
 
         # Terminate if small (interior) node movements
-        converged = maximum(norm.(dp[d.<-geps])) < dptol
+        converged = maximum(norm.(dp[d.<-geps]); init=0.0) < dptol
         converged && break
     end
     

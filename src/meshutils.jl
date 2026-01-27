@@ -47,16 +47,19 @@ Compute the generalized volume (area in 2D, volume in 3D) of a single element.
 function element_volume(el)
     # Generic simplex handling could go here later.
     # For now, explicit checks for standard shapes:
+
+    N = length(el)
+    D = N > 0 ? length(el[1]) : 0
     
-    if length(el) == 3 # Triangle (2D)
+    if D == 2 && N == 3 # Triangle (2D)
         p12 = el[2] - el[1]
         p13 = el[3] - el[1]
         return (p12[1] * p13[2] - p12[2] * p13[1]) / 2
         
-    elseif length(el) == 4 # Tetrahedron (3D)
+    elseif D == 3 && N == 4 # Tetrahedron (3D)
         error("3D Tetrahedra not yet implemented")
         
-    elseif length(el) == 4 && length(el[1]) == 2 # Example: Quad (2D) logic check
+    elseif D == 2 && N == 4 # Example: Quad (2D) logic check
         # Quad logic
         error("2D Quadrilaterals not yet implemented")
         
@@ -87,14 +90,12 @@ function element_quality(el)
         # R = a*b*c / (4*area)
         # Quality = 2*r/R
         
-        # Simplified equivalent formula:
         denom = (a * b * c)
         if denom ≈ 0
              return 0.0
         end
         
-        numerator = (b + c - a) * (c + a - b) * (a + b - c)
-        return 8 * (s - a) * (s - b) * (s - c) / (a * b * c) 
+        return 8 * (s - a) * (s - b) * (s - c) / denom
     else
          error("Dimension not implemented")
     end
@@ -155,6 +156,9 @@ function cleanup_mesh(msh::DMesh)
 
     # 1. Snap nodes to a grid to identify duplicates (relative tolerance)
     scaling = maximum(norm.(p))
+    if scaling == 0.0
+        scaling = 1.0
+    end
     pp = [snap.(p1, scaling) for p1 in p]
     
     # 2. Find unique nodes
