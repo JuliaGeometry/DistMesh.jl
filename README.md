@@ -63,4 +63,4 @@ This package is a Julia port of the [DistMesh](http://persson.berkeley.edu/distm
 
 ## Related Packages
 
-Several other implementations of the DistMesh algorithm exist in the Julia ecosystem, including [DistMesh-Julia](https://github.com/precise-simulation/distmesh-julia) and [DistMesh2D.jl](https://juliapackages.com/p/distmesh2d). Please consider checking these packages if DistMesh.jl does not meet your specific requirements.
+Several other implementations of the DistMesh algorithm exist in the Julia ecosystem, including [DistMesh-Julia](https://github.com/precise-simulation/distmesh-julia) and [DistMesh2D.jl](https://github.com/jstarczewski/DistMesh2D.jl). Please consider checking these packages if DistMesh.jl does not meet your specific requirements.
