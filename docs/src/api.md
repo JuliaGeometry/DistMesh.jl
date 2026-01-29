@@ -68,5 +68,7 @@ huniform
 element_volumes
 element_qualities
 cleanup_mesh
+element_face_neighbors
+boundary_faces
 
 ```

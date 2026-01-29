@@ -1,4 +1,17 @@
 ################################################################################
+### Basic mesh element properties
+################################################################################
+
+const facemap = [SA[SA[2,1]],
+                 SA[SA[2,3],
+                    SA[3,1],
+                    SA[1,2]],
+                 SA[SA[2,3,4],
+                    SA[1,4,3],
+                    SA[4,1,2],
+                    SA[3,2,1]]]
+
+################################################################################
 ### Delaunator wrappers
 ################################################################################
 
@@ -177,4 +190,98 @@ function cleanup_mesh(msh::DMesh)
 
     return (msh=DMesh(new_p, new_t), ix=ix)
     
+end
+
+"""
+    element_face_neighbors(msh::DMesh{D,T,N,I}) -> (t2t, t2n)
+
+Compute element connectivities (topology) across faces.
+
+Returns two matrices of size `(num_faces_per_element, num_elements)`:
+- `t2t[j, i]`: The index of the neighbor element sharing face `j` of element `i`.
+- `t2n[j, i]`: The local face index of that neighbor element (seen from the neighbor).
+
+If element `i`'s face `j` is on the boundary, both entries are `0`.
+
+# Arguments
+- `msh`: The mesh object.
+
+# Returns
+- `t2t`: Element-to-neighbor-element map.
+- `t2n`: Element-to-neighbor-face map.
+"""
+function element_face_neighbors(msh::DMesh{D,T,N,I}) where {D,T,N,I}
+    t = msh.t
+    nt = length(t)
+    
+    map = facemap[N-1] 
+    nf = length(map)       # Number of faces per element
+    nfv = length(map[1])   # Number of vertices per face
+
+    t2t = zeros(I, nf, nt)
+    t2n = zeros(I, nf, nt)
+    
+    # Key is SVector (canonical face), Value is (element_idx, face_idx)
+    dd = Dict{SVector{nfv, I}, NTuple{2, I}}()
+    sizehint!(dd, nt * nf)
+
+    for iel in 1:nt
+        verts = t[iel]
+        
+        for jf in 1:nf
+            # Construct the canonical face key
+            key = sort(verts[map[jf]])
+            
+            if haskey(dd, key)
+                nbel, nbface = pop!(dd, key)
+                
+                # Link Current -> Neighbor
+                t2t[jf, iel] = nbel
+                t2n[jf, iel] = nbface
+                
+                # Link Neighbor -> Current
+                t2t[nbface, nbel] = iel
+                t2n[nbface, nbel] = jf
+            else
+                dd[key] = (iel, jf)
+            end
+        end
+    end
+    return t2t, t2n
+end
+
+"""
+    boundary_faces(msh::DMesh{D,T,N,I}) -> Vector{SVector{L, I}}
+
+Identify the boundary faces of the mesh.
+
+Returns a list of all mesh faces that are not shared by two elements. 
+- For a 2D triangular mesh, these are the boundary edges (line segments).
+- For a 3D tetrahedral mesh, these are the boundary faces (triangles).
+
+# Arguments
+- `msh`: The mesh object.
+
+# Returns
+- A `Vector` of `SVector`s, where each `SVector` contains the node indices of a boundary face.
+"""
+function boundary_faces(msh::DMesh{D,T,N,I}) where {D,T,N,I}
+    t2t, = element_face_neighbors(msh)
+    nt = length(msh.t)
+    
+    map = facemap[N-1] 
+    nf = length(map)       # Number of faces per element
+    nfv = length(map[1])   # Number of vertices per face (L in docstring)
+
+    bnd = SVector{nfv,I}[]
+    sizehint!(bnd, floor(Int, sqrt(nt) * 4)) 
+
+    for iel in 1:nt
+        for jf in 1:nf
+            if t2t[jf,iel] == 0
+                push!(bnd, msh.t[iel][map[jf]])
+            end
+        end
+    end
+    return bnd
 end
