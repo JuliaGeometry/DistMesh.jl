@@ -251,6 +251,44 @@ function element_face_neighbors(msh::DMesh{D,T,N,I}) where {D,T,N,I}
 end
 
 """
+    foreach_face(f::Function, msh::DMesh)
+
+Iterate over all local faces of all elements in the mesh, applying the function `f`.
+
+This is an internal higher-order helper function designed to traverse the mesh 
+topology efficiently. It handles the boilerplate of looking up element-to-element 
+connectivity and face mappings.
+
+The provided function `f` must accept four arguments:
+1. `iel`: The index of the current element.
+2. `jf`: The local index of the face within the current element.
+3. `jel`: The index of the neighboring element sharing this face (0 if it is a boundary face).
+4. `map`: The local node mapping for the faces of this element type.
+
+# Example Usage
+```julia
+foreach_face(msh) do iel, jf, jel, map
+    if jel == 0
+        println("Found a boundary face on element \$iel")
+    end
+end
+"""
+function foreach_face(f::Function, msh::DMesh{D,T,N,I}) where {D,T,N,I}
+    t2t, = element_face_neighbors(msh)
+    nt = length(msh.t)
+    map = facemap[N-1]
+    nf = length(map)
+
+    for iel in 1:nt
+        for jf in 1:nf
+            jel = t2t[jf,iel]
+            # Call the user-provided function with the current state
+            f(iel, jf, jel, map)
+        end
+    end
+end
+
+"""
     boundary_faces(msh::DMesh{D,T,N,I}) -> Vector{SVector{L, I}}
 
 Identify the boundary faces of the mesh.
@@ -266,24 +304,59 @@ Returns a list of all mesh faces that are not shared by two elements.
 - A `Vector` of `SVector`s, where each `SVector` contains the node indices of a boundary face.
 """
 function boundary_faces(msh::DMesh{D,T,N,I}) where {D,T,N,I}
-    t2t, = element_face_neighbors(msh)
+    map = facemap[N-1]
+    nfv = length(map[1])
     nt = length(msh.t)
     
-    map = facemap[N-1] 
-    nf = length(map)       # Number of faces per element
-    nfv = length(map[1])   # Number of vertices per face (L in docstring)
-
     bnd = SVector{nfv,I}[]
     sizehint!(bnd, floor(Int, sqrt(nt) * 4)) 
 
-    for iel in 1:nt
-        for jf in 1:nf
-            if t2t[jf,iel] == 0
-                push!(bnd, msh.t[iel][map[jf]])
-            end
+    foreach_face(msh) do iel, jf, jel, map
+        if jel == 0
+            push!(bnd, msh.t[iel][map[jf]])
         end
     end
+
     return bnd
+end
+
+"""
+    all_faces(msh::DMesh{D,T,N,I}) -> Tuple{Vector{SVector{L, I}}, Vector{Int}}
+
+Identify all unique faces in the mesh and locate the boundary faces.
+
+Returns a complete list of every face in the mesh exactly once. For interior faces 
+shared by two adjacent elements, only a single instance is recorded. Additionally, 
+it returns the indices of the faces that lie on the external boundary (i.e., faces 
+not shared by another element).
+
+- For a 2D triangular mesh, these are all unique edges in the mesh.
+- For a 3D tetrahedral mesh, these are all unique triangular faces.
+
+# Arguments
+- `msh`: The mesh object.
+
+# Returns
+- A `Tuple` containing two vectors:
+    1. `faces`: A `Vector` of `SVector`s, where each `SVector` contains the node indices of a unique face.
+    2. `boundary_idx`: A `Vector{Int}` containing the corresponding indices of the boundary faces within the `faces` array.
+"""
+function all_faces(msh::DMesh{D,T,N,I}) where {D,T,N,I}
+    nfv = length(facemap[N-1][1])
+    
+    faces = SVector{nfv,I}[]
+    boundary_idx = Int[]
+
+    foreach_face(msh) do iel, jf, jel, map
+        if jel == 0 || jel > iel
+            push!(faces, msh.t[iel][map[jf]])
+        end
+        if jel == 0
+            push!(boundary_idx, length(faces))
+        end
+    end
+
+    return faces, boundary_idx
 end
 
 """
@@ -302,3 +375,30 @@ or boundary edges (in 2D).
 - A `Vector` of integers (of type `I`) containing the unique indices of all boundary nodes.
 """
 boundary_nodes(msh::DMesh) = unique(Iterators.flatten(boundary_faces(msh)))
+
+"""
+    node_degrees(msh::DMesh{2}) -> Vector{Int}
+
+Compute the degree of each node (vertex) in a 2D mesh.
+
+The degree is calculated as the number of unique edges connected to a given node. 
+
+# Arguments
+- `msh`: A 2D mesh object (`DMesh{2}`).
+
+# Returns
+- A `Vector{Int}` of the same length as the number of nodes in the mesh, 
+  where the `i`-th entry contains the degree of the `i`-th node.
+"""
+function node_degrees(msh::DMesh{2})
+    faces, = all_faces(msh) # In 2D, faces are equivalent to edges
+    deg = zeros(Int, length(msh.p))
+    
+    for f in faces
+        for i in f
+            deg[i] += 1
+        end
+    end
+    
+    return deg
+end
