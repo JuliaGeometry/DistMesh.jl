@@ -285,3 +285,20 @@ function boundary_faces(msh::DMesh{D,T,N,I}) where {D,T,N,I}
     end
     return bnd
 end
+
+"""
+    boundary_nodes(msh::DMesh) -> Vector{I}
+
+Identify the boundary nodes (vertices) of the mesh.
+
+Returns a list of all unique node indices that lie on the external boundary 
+of the mesh. These are the nodes that make up the boundary faces (in 3D) 
+or boundary edges (in 2D).
+
+# Arguments
+- `msh`: The mesh object.
+
+# Returns
+- A `Vector` of integers (of type `I`) containing the unique indices of all boundary nodes.
+"""
+boundary_nodes(msh::DMesh) = unique(Iterators.flatten(boundary_faces(msh)))

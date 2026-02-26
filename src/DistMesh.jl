@@ -24,6 +24,6 @@ export huniform
 export naca_coeffs, dnaca
 
 export element_qualities, element_volumes, cleanup_mesh
-export element_face_neighbors, boundary_faces
+export element_face_neighbors, boundary_faces, boundary_nodes
 
 end # module
