@@ -39,6 +39,39 @@ function check_mesh(msh::DMesh; np::Int=0, nt::Int=0, area::Real=0.0, areatol::R
     end
 end
 
+@testset "Simple Mesh Properties" begin
+    p = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    t = [(1, 2, 3), (1, 3, 4)]
+    msh = DMesh(p, t)
+
+    # 1. element_face_neighbors
+    t2t, t2n = element_face_neighbors(msh)
+    @test t2t == [0 0; 2 0; 0 1]
+    @test t2n == [0 0; 3 0; 0 2]
+
+    # 2. boundary_faces (bedges)
+    normalize_edges(v) = sort!(collect.(v))
+    
+    bedges = boundary_faces(msh)
+    expected_bedges = [[2, 3], [1, 2], [3, 4], [4, 1]]
+    @test normalize_edges(bedges) == normalize_edges(expected_bedges)
+
+    # 3. all_faces (edges)
+    faces, boundary_idx = all_faces(msh)
+    expected_faces = [[2, 3], [3, 1], [1, 2], [3, 4], [4, 1]]
+    @test normalize_edges(faces) == normalize_edges(expected_faces)
+    @test normalize_edges(faces[boundary_idx]) == normalize_edges(expected_bedges)
+
+    # 4. boundary_nodes (bnodes)
+    bnodes = boundary_nodes(msh)
+    expected_bnodes = [2, 3, 1, 4]
+    @test sort(bnodes) == sort(expected_bnodes)
+
+    # 5. node_degrees (degree)
+    degree = node_degrees(msh)
+    @test degree == [3, 2, 3, 2]
+end
+
 @testset "Unit Circle Mesh" begin
     msh = distmesh2d(dcircle, huniform, 0.2, ((-1,-1), (1,1)))
     check_mesh(msh, np=88, nt=143)

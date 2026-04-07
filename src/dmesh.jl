@@ -16,6 +16,11 @@ struct DMesh{D, T, N, I <: Integer}
     t::Vector{SVector{N, I}}
 end
 
+# Outer constructor to convert tuples to SVectors
+function DMesh(p::AbstractVector{<:NTuple{D, T}}, t::AbstractVector{<:NTuple{N, I}}) where {D, T, N, I <: Integer}
+    return DMesh{D, T, N, I}(SVector{D, T}.(p), SVector{N, I}.(t))
+end
+
 # Make DMesh iterable so it acts like (p, t)
 Base.iterate(m::DMesh, state=1) = iterate((m.p, m.t), state)
 Base.eltype(::Type{DMesh{D,T,N,I}}) where {D,T,N,I} = Union{Vector{SVector{D,T}}, Vector{SVector{N,I}}}
