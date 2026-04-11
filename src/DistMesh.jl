@@ -5,6 +5,7 @@ using LinearAlgebra
 using Delaunator
 
 # --- Load Types ---
+include("element_geometry.jl")
 include("dmesh.jl")
 
 # --- Load Utilities and 2D Implementation ---
@@ -13,6 +14,9 @@ include("meshutils.jl")
 include("distmesh2d.jl")
 
 # --- Exports ---
+
+export ElementGeometry, Simplex, Block
+export nvertices, nfaces, nedges, facemap, edgemap
 
 export DMesh, as_arrays
 export distmesh2d
@@ -24,6 +28,6 @@ export huniform
 export naca_coeffs, dnaca
 
 export element_qualities, element_volumes, cleanup_mesh
-export element_face_neighbors, all_faces, boundary_faces, boundary_nodes, node_degrees
+export element_face_neighbors, all_faces, boundary_faces, boundary_nodes, all_edges, node_degrees
 
 end # module
