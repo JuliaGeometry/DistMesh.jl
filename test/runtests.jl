@@ -102,7 +102,7 @@ const EXAMPLES_DIR = joinpath(@__DIR__, "..", "examples")
             path = joinpath(EXAMPLES_DIR, file)
             content = read(path, String)
             
-            # Swap GLMakie -> CairoMakie (for Headless tests)
+            # Swap GLMakie -> CairoMakie for headless/CI tests (no display required)
             content = replace(content, "using GLMakie" => "using CairoMakie")
 
             # Run the code

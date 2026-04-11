@@ -2,7 +2,7 @@ module DistMeshGLMakieExt
 
 using DistMesh
 using GLMakie
-using GeometryBasics 
+import GeometryBasics
 
 const MESH_COLOR = "#DDEEFF"
 
@@ -36,14 +36,14 @@ end
 Converts a DistMesh DMesh object into a GeometryBasics.normal_mesh
 suitable for high-performance GLMakie plotting and updates.
 """
-function to_gl_mesh(m::DMesh{2})
+function to_gl_mesh(m::DMesh{2,T,Simplex{2}}) where {T}
     p, t = as_arrays(m)
 
     # 1. strict conversion to Float32 Points (GL standard)
-    pts = Point2f[Point2f(col) for col in eachcol(p)]
+    pts = GeometryBasics.Point2f[GeometryBasics.Point2f(col) for col in eachcol(p)]
     
     # 2. strict conversion to standard Triangle Faces
-    faces = GLTriangleFace[GLTriangleFace(col...) for col in eachcol(t)]
+    faces = GeometryBasics.GLTriangleFace[GeometryBasics.GLTriangleFace(col...) for col in eachcol(t)]
     
     # 3. Create Mesh and compute Normals
     #    (Required because Makie initializes with normals by default; 
@@ -55,15 +55,12 @@ end
 # 2. Standard Plot (Static)
 # ---------------------------------------------------------
 
-function GLMakie.plot(m::DMesh{2}; args...) 
+# Fast GL path for triangle meshes
+function GLMakie.plot(m::DMesh{2,T,Simplex{2}}; args...) where {T}
     f, ax = get_canvas()
-    
-    # Standard plot: Clear the axis and draw fresh
-    empty!(ax) 
-    
+    empty!(ax)
     gl_mesh = to_gl_mesh(m)
     poly!(ax, gl_mesh, color=MESH_COLOR, strokewidth=1)
-    
     return f
 end
 
@@ -71,7 +68,7 @@ end
 # 3. Live Plot (Dynamic / Animation)
 # ---------------------------------------------------------
 
-function DistMesh.live_plot(m::DMesh{2})
+function DistMesh.live_plot(m::DMesh{2,T,Simplex{2}}) where {T}
     f, ax = get_canvas()
     
     # Always convert the incoming data to the strict GL mesh format
@@ -91,6 +88,12 @@ function DistMesh.live_plot(m::DMesh{2})
     
     sleep(0.01)
     return f
+end
+
+# live_plot fallback for non-triangle meshes
+function DistMesh.live_plot(m::DMesh{2})
+    @warn "Live plotting is only supported for triangle meshes (Simplex{2})."
+    return nothing
 end
 
 end
