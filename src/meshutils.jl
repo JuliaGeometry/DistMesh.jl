@@ -1,17 +1,4 @@
 ################################################################################
-### Basic mesh element properties
-################################################################################
-
-const facemap = [SA[SA[2,1]],
-                 SA[SA[2,3],
-                    SA[3,1],
-                    SA[1,2]],
-                 SA[SA[2,3,4],
-                    SA[1,4,3],
-                    SA[4,1,2],
-                    SA[3,2,1]]]
-
-################################################################################
 ### Delaunator wrappers
 ################################################################################
 
@@ -46,90 +33,250 @@ Returns `1.0`. Default sizing function for uniform meshes.
 """
 huniform(p) = 1
 
-
 ################################################################################
-### Element properties
+### Element Mapping / Generators
 ################################################################################
 
 """
-    element_volume(el)
+    element_map(f, msh::DMesh{D, T, G})
 
-Compute the generalized volume (area in 2D, volume in 3D) of a single element.
-`el` is a vector of coordinates (e.g. [[x1, y1], [x2, y2], [x3, y3]]).
+Return a generator that lazily applies `f(G(), nodes)` to the nodes of each 
+element in the mesh. `nodes` is an `SVector` of the physical coordinates.
+
+Example:
+`total_vol = sum(element_map(element_volume, msh))`
 """
-function element_volume(el)
-    # Generic simplex handling could go here later.
-    # For now, explicit checks for standard shapes:
+function element_map(f, msh::DMesh{D, T, G}) where {D, T, G}
+    return (f(G(), msh.p[el]) for el in msh.t)
+end
 
-    N = length(el)
-    D = N > 0 ? length(el[1]) : 0
+################################################################################
+### Element Volumes
+################################################################################
+
+element_volume(::ElementGeometry, el) = error("Not implemented for this geometry")
+
+"""
+    element_volume(::Simplex{1}, el)
+
+Compute the length of a 1D line segment.
+"""
+element_volume(::Simplex{1}, el) = norm(el[2] - el[1])
+
+"""
+    element_volume(::Block{1}, el)
+
+Compute the length of a 1D line segment.
+"""
+element_volume(::Block{1}, el) = norm(el[2] - el[1])
+
+"""
+    element_volume(::Simplex{2}, el)
+
+Compute the area of a 2D triangle.
+"""
+function element_volume(::Simplex{2}, el)
+    p1, p2, p3 = el
+    p12 = p2 - p1
+    p13 = p3 - p1
+    return (p12[1] * p13[2] - p12[2] * p13[1]) / 2
+end
+
+"""
+    element_volume(::Simplex{3}, el)
+
+Compute the volume of a 3D tetrahedron.
+"""
+function element_volume(::Simplex{3}, el)
+    p1, p2, p3, p4 = el
+    return dot(p2 - p1, cross(p3 - p1, p4 - p1)) / 6
+end
+
+"""
+    element_volume(::Block{2}, el)
+
+Compute the area of a 2D quadrilateral.
+"""
+function element_volume(::Block{2}, el)
+    p1,p2,p3,p4 = el
+    AC = p3 - p1
+    BD = p4 - p2
+    return 0.5*(AC[1]*BD[2] - AC[2]*BD[1])
+end
+
+"""
+    element_volume(::Block{3}, el)
+
+Compute the volume of a 3D hexahedron.
+"""
+function element_volume(::Block{3}, el)
+    p1,p2,p3,p4,p5,p6,p7,p8 = el
+    # Decomposes into 5 tetrahedra.
+    tet(a,b,c,d) = dot(b-a, cross(c-a, d-a)) / 6
+    return tet(p1,p2,p4,p5) + tet(p2,p3,p4,p7) + tet(p2,p5,p6,p7) +
+           tet(p4,p5,p7,p8) + tet(p2,p4,p5,p7)
+end
+
+################################################################################
+### Element Qualities - Simplex Elements
+################################################################################
+
+# Metric 1: Radius Ratio
+element_quality_radius_ratio(::Simplex{1}, el) = 1.0
+
+function element_quality_radius_ratio(::Simplex{2}, el)
+    p1, p2, p3 = el
+    a = norm(p2 - p1)
+    b = norm(p3 - p2)
+    c = norm(p1 - p3)
     
-    if D == 2 && N == 3 # Triangle (2D)
-        p12 = el[2] - el[1]
-        p13 = el[3] - el[1]
-        return (p12[1] * p13[2] - p12[2] * p13[1]) / 2
-        
-    elseif D == 3 && N == 4 # Tetrahedron (3D)
-        error("3D Tetrahedra not yet implemented")
-        
-    elseif D == 2 && N == 4 # Example: Quad (2D) logic check
-        # Quad logic
-        error("2D Quadrilaterals not yet implemented")
-        
-    else
-        error("Element type or dimension not supported")
-    end
+    s = (a + b + c) / 2
+    denom = a * b * c
+    
+    return denom ≈ 0 ? 0.0 : 8 * (s - a) * (s - b) * (s - c) / denom
 end
 
-"""
-    element_quality(el)
+function element_quality_radius_ratio(::Simplex{3}, el)
+    p1, p2, p3, p4 = el
+    d12 = p2 - p1;  d13 = p3 - p1;  d14 = p4 - p1
+    d23 = p3 - p2;  d24 = p4 - p2;  d34 = p4 - p3
 
-Compute a quality metric for a single element (normalized 0.0 to 1.0).
-Currently implements 2*r/R (radius ratio) for triangles.
-"""
-function element_quality(el)
-    if length(el) == 3 # Triangle
-        # Lengths of the three edges
-        a = norm(el[2] - el[1])
-        b = norm(el[3] - el[2])
-        c = norm(el[1] - el[3])
-        
-        # Semiperimeter
-        s = (a + b + c) / 2
-        
-        # Area (Heron's formula) for inradius calculation
-        # area = sqrt(s * (s-a) * (s-b) * (s-c))
-        # r = area / s
-        # R = a*b*c / (4*area)
-        # Quality = 2*r/R
-        
-        denom = (a * b * c)
-        if denom ≈ 0
-             return 0.0
-        end
-        
-        return 8 * (s - a) * (s - b) * (s - c) / denom
-    else
-         error("Dimension not implemented")
-    end
+    v  = element_volume(Simplex{3}(), el)
+    s1 = norm(d12 × d13) / 2
+    s2 = norm(d12 × d14) / 2
+    s3 = norm(d13 × d14) / 2
+    s4 = norm(d23 × d24) / 2
+
+    p_1 = norm(d12) * norm(d34)
+    p_2 = norm(d23) * norm(d14)
+    p_3 = norm(d13) * norm(d24)
+
+    denom = (s1 + s2 + s3 + s4) * sqrt((p_1 + p_2 + p_3) * (p_1 + p_2 - p_3) *
+                                        (p_1 + p_3 - p_2) * (p_2 + p_3 - p_1))
+    return denom ≈ 0 ? 0.0 : 216 * v^2 / denom
 end
 
-# Helper to map a function over all elements
-_map_elements(m::DMesh, f) = [f(m.p[indices]) for indices in m.t]
+# Metric 2: Mean Ratio
+element_quality_mean_ratio(::Simplex{1}, el) = 1.0
 
-"""
-    element_qualities(m::DMesh, quality_func=element_quality)
+function element_quality_mean_ratio(::Simplex{2}, el)
+    p1, p2, p3 = el
+    area = element_volume(Simplex{2}(), el)
+    l_sq = sum(abs2, p2 - p1) + sum(abs2, p3 - p2) + sum(abs2, p1 - p3)
+    
+    return l_sq ≈ 0 ? 0.0 : (4 * sqrt(3) * area) / l_sq
+end
 
-Return a vector of quality metrics for every element in the mesh.
-"""
-element_qualities(m::DMesh, f=element_quality) = _map_elements(m, f)
+function element_quality_mean_ratio(::Simplex{3}, el)
+    p1, p2, p3, p4 = el
+    v    = element_volume(Simplex{3}(), el)
+    l_sq = sum(abs2, p2 - p1) + sum(abs2, p3 - p1) + sum(abs2, p4 - p1) +
+           sum(abs2, p3 - p2) + sum(abs2, p4 - p2) + sum(abs2, p4 - p3)
+
+    return l_sq ≈ 0 ? 0.0 : 216 * v / sqrt(3) / l_sq^(3/2)
+end
+
+################################################################################
+### Element Qualities - Block Elements
+################################################################################
+
+# Mean ratio: normalized to [0,1], 1 = perfect square/cube. Analogous to
+# element_quality_mean_ratio for simplices (Knupp 2000).
+function element_quality_mean_ratio(::Block{2}, el)
+    p1, p2, p3, p4 = el
+    e = (p2-p1, p3-p2, p4-p3, p1-p4)  # edge vectors (cyclic)
+    cross2d(u, v) = u[1]*v[2] - u[2]*v[1]
+
+    l2 = SVector(sum(abs2, e[1]), sum(abs2, e[2]), sum(abs2, e[3]), sum(abs2, e[4]))
+    A  = SVector(cross2d(e[1],-e[4]), cross2d(e[2],-e[1]),
+                 cross2d(e[3],-e[2]), cross2d(e[4],-e[3]))
+    Q  = SVector((l2[1]+l2[3]), (l2[2]+l2[4]),
+                 (l2[3]+l2[1]), (l2[4]+l2[2])) ./ (2 .* A)
+
+    return 4 / sum(Q)
+end
+
+function element_quality_mean_ratio(::Block{3}, el)
+    p1,p2,p3,p4,p5,p6,p7,p8 = el
+    # At each corner, form the 3x3 Jacobian W from the 3 incident edge vectors.
+    # Corner ordering matches the hex node layout (bottom 1-2-3-4, top 5-6-7-8).
+    corners = (
+        (p2-p1, p4-p1, p5-p1),  # corner 1
+        (p3-p2, p1-p2, p6-p2),  # corner 2
+        (p4-p3, p2-p3, p7-p3),  # corner 3
+        (p1-p4, p3-p4, p8-p4),  # corner 4
+        (p8-p5, p6-p5, p1-p5),  # corner 5
+        (p5-p6, p7-p6, p2-p6),  # corner 6
+        (p6-p7, p8-p7, p3-p7),  # corner 7
+        (p7-p8, p5-p8, p4-p8),  # corner 8
+    )
+    function corner_quality(e1, e2, e3)
+        detW = dot(e1, cross(e2, e3))
+        detW <= 0 && return 0.0
+        frob2 = sum(abs2, e1) + sum(abs2, e2) + sum(abs2, e3)
+        return 3 * cbrt(detW^2) / frob2
+    end
+    return minimum(corner_quality(c...) for c in corners)
+end
+
+# Condition number of the corner Jacobian matrix (Knupp 2000).
+function element_quality_condition_number(::Block{2}, el)
+    p1, p2, p3, p4 = el
+    e = (p2-p1, p3-p2, p4-p3, p1-p4)  # edge vectors (cyclic)
+    cross2d(u, v) = u[1]*v[2] - u[2]*v[1]
+
+    l2   = SVector(sum(abs2, e[1]), sum(abs2, e[2]), sum(abs2, e[3]), sum(abs2, e[4]))
+    sins = SVector(cross2d(e[1],-e[4]), cross2d(e[2],-e[1]),
+                   cross2d(e[3],-e[2]), cross2d(e[4],-e[3])) ./
+           SVector(sqrt(l2[4]*l2[1]), sqrt(l2[1]*l2[2]),
+                   sqrt(l2[2]*l2[3]), sqrt(l2[3]*l2[4]))
+    any(<=(0), sins) && return 0.0
+
+    k = SVector(l2[4]+l2[1], l2[1]+l2[2], l2[2]+l2[3], l2[3]+l2[4]) ./
+        (SVector(sqrt(l2[4]*l2[1]), sqrt(l2[1]*l2[2]),
+                 sqrt(l2[2]*l2[3]), sqrt(l2[3]*l2[4])) .* sins)
+
+    return 4 / sqrt(sum(abs2, k))
+end
+
+function element_quality_min_scaled_jacobian(::Block{2}, el)
+    # Minimum scaled corner Jacobian in [-1,1]; <= 0 means concave or self-intersecting
+    p1, p2, p3, p4 = el
+    e = (p2-p1, p3-p2, p4-p3, p1-p4)  # edge vectors (cyclic)
+    cross2d(u, v) = u[1]*v[2] - u[2]*v[1]
+
+    J = SVector(cross2d(e[1],-e[4]), cross2d(e[2],-e[1]),
+                cross2d(e[3],-e[2]), cross2d(e[4],-e[3]))
+    maxJ = maximum(abs.(J))
+    return maxJ ≈ 0 ? 0.0 : minimum(J) / maxJ
+end
+
+################################################################################
+### Default Quality Metrics
+################################################################################
+
+default_quality_metric(::Simplex) = element_quality_radius_ratio
+default_quality_metric(::Block)   = element_quality_mean_ratio
+
+################################################################################
+### User-Facing Shorthands
+################################################################################
 
 """
     element_volumes(m::DMesh)
 
-Return a vector of volumes (or areas) for every element in the mesh.
+Return a `Vector` of volumes (or areas) for every element in the mesh.
 """
-element_volumes(m::DMesh) = _map_elements(m, element_volume)
+element_volumes(m::DMesh) = collect(element_map(element_volume, m))
+
+"""
+    element_qualities(m::DMesh; metric=default_quality_metric(G()))
+
+Return a `Vector` of quality metrics for every element in the mesh. 
+"""
+function element_qualities(m::DMesh{D, T, G}; metric=default_quality_metric(G())) where {D, T, G}
+    return collect(element_map(metric, m))
+end
 
 ################################################################################
 ### General mesh utilities
@@ -210,11 +357,11 @@ If element `i`'s face `j` is on the boundary, both entries are `0`.
 - `t2t`: Element-to-neighbor-element map.
 - `t2n`: Element-to-neighbor-face map.
 """
-function element_face_neighbors(msh::DMesh{D,T,N,I}) where {D,T,N,I}
+function element_face_neighbors(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
     t = msh.t
     nt = length(t)
     
-    map = facemap[N-1] 
+    map = facemap(G())
     nf = length(map)       # Number of faces per element
     nfv = length(map[1])   # Number of vertices per face
 
@@ -273,10 +420,10 @@ foreach_face(msh) do iel, jf, jel, map
     end
 end
 """
-function foreach_face(f::Function, msh::DMesh{D,T,N,I}) where {D,T,N,I}
+function foreach_face(f::Function, msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
     t2t, = element_face_neighbors(msh)
     nt = length(msh.t)
-    map = facemap[N-1]
+    map = facemap(G())
     nf = length(map)
 
     for iel in 1:nt
@@ -303,8 +450,8 @@ Returns a list of all mesh faces that are not shared by two elements.
 # Returns
 - A `Vector` of `SVector`s, where each `SVector` contains the node indices of a boundary face.
 """
-function boundary_faces(msh::DMesh{D,T,N,I}) where {D,T,N,I}
-    map = facemap[N-1]
+function boundary_faces(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+    map = facemap(G())
     nfv = length(map[1])
     nt = length(msh.t)
     
@@ -341,8 +488,8 @@ not shared by another element).
     1. `faces`: A `Vector` of `SVector`s, where each `SVector` contains the node indices of a unique face.
     2. `boundary_idx`: A `Vector{Int}` containing the corresponding indices of the boundary faces within the `faces` array.
 """
-function all_faces(msh::DMesh{D,T,N,I}) where {D,T,N,I}
-    nfv = length(facemap[N-1][1])
+function all_faces(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+    nfv = length(facemap(G())[1])
     
     faces = SVector{nfv,I}[]
     boundary_idx = Int[]
@@ -377,6 +524,38 @@ or boundary edges (in 2D).
 boundary_nodes(msh::DMesh) = unique(Iterators.flatten(boundary_faces(msh)))
 
 """
+    all_edges(msh::DMesh) -> Vector{SVector{2, I}}
+
+Identify all unique edges in the mesh.
+
+Extracts all edges from every element, normalizes their orientation (smallest node index first), 
+and returns a list of unique edges. Works for both 2D and 3D meshes.
+
+# Arguments
+- `msh`: The mesh object.
+
+# Returns
+- A `Vector` of 2-element `SVector`s representing the unique edges in the mesh.
+"""
+function all_edges(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+    emap = edgemap(G())
+    
+    total_edges = length(msh.t) * length(emap)
+    edges = Vector{SVector{2, I}}(undef, total_edges)
+    
+    idx = 1
+    for el in msh.t
+        for e_local in emap
+            n1, n2 = el[e_local]
+            edges[idx] = SVector(min(n1, n2), max(n1, n2))
+            idx += 1
+        end
+    end
+    
+    return unique!(sort!(edges))
+end
+
+"""
     node_degrees(msh::DMesh{2}) -> Vector{Int}
 
 Compute the degree of each node (vertex) in a 2D mesh.
@@ -390,12 +569,12 @@ The degree is calculated as the number of unique edges connected to a given node
 - A `Vector{Int}` of the same length as the number of nodes in the mesh, 
   where the `i`-th entry contains the degree of the `i`-th node.
 """
-function node_degrees(msh::DMesh{2})
-    faces, = all_faces(msh) # In 2D, faces are equivalent to edges
+function node_degrees(msh::DMesh)
+    edges = all_edges(msh) 
     deg = zeros(Int, length(msh.p))
     
-    for f in faces
-        for i in f
+    for e in edges
+        for i in e
             deg[i] += 1
         end
     end
