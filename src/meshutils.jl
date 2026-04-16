@@ -278,8 +278,13 @@ function element_qualities(m::DMesh{D, T, G}; metric=default_quality_metric(G())
     return collect(element_map(metric, m))
 end
 
+function find_elems(m::DMesh, cond::Function)
+    return findall(tt -> cond(sum(m.p[tt]) / length(tt)), m.t)
+end
+
+
 ################################################################################
-### General mesh utilities
+### General mesh topology utilities
 ################################################################################
 
 snap(x::T, scaling=1) where {T <: Real} = x
@@ -340,62 +345,98 @@ function cleanup_mesh(msh::DMesh)
 end
 
 """
-    element_face_neighbors(msh::DMesh{D,T,N,I}) -> (t2t, t2n)
+    element_face_neighbors(msh::DMesh{D,T,G,N,I}) -> Matrix{Tuple{I, I}}
 
-Compute element connectivities (topology) across faces.
+Compute element connectivities across faces.
 
-Returns two matrices of size `(num_faces_per_element, num_elements)`:
-- `t2t[j, i]`: The index of the neighbor element sharing face `j` of element `i`.
-- `t2n[j, i]`: The local face index of that neighbor element (seen from the neighbor).
+Returns a matrix of size `(num_faces_per_element, num_elements)` where each entry 
+is a tuple `(neighbor_element, neighbor_local_face)`.
 
-If element `i`'s face `j` is on the boundary, both entries are `0`.
-
-# Arguments
-- `msh`: The mesh object.
-
-# Returns
-- `t2t`: Element-to-neighbor-element map.
-- `t2n`: Element-to-neighbor-face map.
+If a face is on the boundary, the entry is `(0, 0)`.
 """
 function element_face_neighbors(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
     t = msh.t
     nt = length(t)
     
-    map = facemap(G())
-    nf = length(map)       # Number of faces per element
-    nfv = length(map[1])   # Number of vertices per face
+    fmap = facemap(G())
+    nf = length(fmap)       
+    nfv = length(fmap[1])   
 
-    t2t = zeros(I, nf, nt)
-    t2n = zeros(I, nf, nt)
+    # Initialize a single matrix of tuples with (0, 0) for boundaries
+    neighbors = fill((zero(I), zero(I)), nf, nt)
     
-    # Key is SVector (canonical face), Value is (element_idx, face_idx)
-    dd = Dict{SVector{nfv, I}, NTuple{2, I}}()
+    # Key is SVector, Value is (element_idx, face_idx)
+    dd = Dict{SVector{nfv, I}, Tuple{I, I}}()
     sizehint!(dd, nt * nf)
 
     for iel in 1:nt
         verts = t[iel]
         
         for jf in 1:nf
-            # Construct the canonical face key
-            key = sort(verts[map[jf]])
+            key = sort(verts[fmap[jf]])
             
             if haskey(dd, key)
                 nbel, nbface = pop!(dd, key)
                 
-                # Link Current -> Neighbor
-                t2t[jf, iel] = nbel
-                t2n[jf, iel] = nbface
-                
-                # Link Neighbor -> Current
-                t2t[nbface, nbel] = iel
-                t2n[nbface, nbel] = jf
+                # Bi-directional link using tuples
+                neighbors[jf, iel] = (nbel, nbface)
+                neighbors[nbface, nbel] = (iel, jf)
             else
                 dd[key] = (iel, jf)
             end
         end
     end
-    return t2t, t2n
+    
+    return neighbors
 end
+
+"""
+    face_element_map(msh::DMesh{D,T,G,N,I}) -> Dict{SVector{nfv, I}, Vector{Tuple{I, I}}}
+
+Compute the mapping from faces to all connected elements. 
+
+Returns a dictionary where each key is a sorted `SVector` representing the face, 
+and the value is a vector of tuples `(element_idx, local_face_idx)`.
+"""
+function face_element_map(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+    t = msh.t
+    nt = length(t)
+    
+    fmap = facemap(G())
+    nf = length(fmap)       
+    nfv = length(fmap[1])   
+
+    # Dictionary maps sorted face -> Vector of (Element, Local Face)
+    face_to_elements = Dict{SVector{nfv, I}, Vector{Tuple{I, I}}}()
+    sizehint!(face_to_elements, div(nt * nf, 2))
+    
+    for iel in 1:nt
+        verts = t[iel]
+        
+        for jf in 1:nf
+            key = sort(verts[fmap[jf]])
+            
+            connected_elements = get!(face_to_elements, key, Tuple{I, I}[])
+            push!(connected_elements, (iel, jf))
+        end
+    end
+    
+    return face_to_elements
+end
+
+"""
+    filter_elements_by_degree(face_map, condition)
+
+Core function to extract unique element indices from a face map where the number 
+of elements sharing a face satisfies the given `condition` function.
+"""
+function filter_elements_by_degree(face_map, condition)
+    problem_elements = [first(item) for v in values(face_map) if condition(length(v)) for item in v]
+    return unique!(problem_elements)
+end
+
+find_nonmanifold_elements(face_map) = filter_elements_by_degree(face_map, x -> x > 2)
+find_boundary_elements(face_map)    = filter_elements_by_degree(face_map, x -> x == 1)
 
 """
     foreach_face(f::Function, msh::DMesh)
@@ -421,14 +462,14 @@ foreach_face(msh) do iel, jf, jel, map
 end
 """
 function foreach_face(f::Function, msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
-    t2t, = element_face_neighbors(msh)
+    nb = element_face_neighbors(msh)
     nt = length(msh.t)
     map = facemap(G())
     nf = length(map)
 
     for iel in 1:nt
         for jf in 1:nf
-            jel = t2t[jf,iel]
+            jel = nb[jf, iel][1]
             # Call the user-provided function with the current state
             f(iel, jf, jel, map)
         end

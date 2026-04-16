@@ -45,9 +45,8 @@ end
     msh = DMesh(p, t)
 
     # 1. element_face_neighbors
-    t2t, t2n = element_face_neighbors(msh)
-    @test t2t == [0 0; 2 0; 0 1]
-    @test t2n == [0 0; 3 0; 0 2]
+    nb = element_face_neighbors(msh)
+    @test nb == [(0,0) (0,0); (2,3) (0,0); (0,0) (1,2)]
 
     # 2. boundary_faces (bedges)
     normalize_edges(v) = sort!(collect.(v))
