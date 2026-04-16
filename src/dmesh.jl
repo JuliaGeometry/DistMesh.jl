@@ -1,3 +1,11 @@
+########################################################################
+# Internal Type Aliases
+
+const Point2d = SVector{2, Float64}
+const Point3d = SVector{3, Float64}
+const Index2 = SVector{2, Int32}   # For Edges
+const Index3 = SVector{3, Int32}   # For Triangles
+
 # -------------------------------------------------------------------------
 # Mesh Data Structures and Helpers
 # -------------------------------------------------------------------------
@@ -43,6 +51,34 @@ function DMesh(p::AbstractVector{<:NTuple{D, T}}, t::AbstractVector{<:NTuple{N, 
 end
 
 # -------------------------------------------------------------------------
+# Matrix Constructors
+# -------------------------------------------------------------------------
+
+# Helper function to bridge runtime matrix dimensions to compile-time SVector parameters
+function _mat_to_svec(mat::AbstractMatrix{T}, ::Val{K}) where {T, K}
+    dense_mat = mat isa Matrix ? mat : Matrix(mat)
+    return copy(reinterpret(reshape, SVector{K, T}, dense_mat))
+end
+
+# 4. Outer constructor: Matrices D-by-NP and N-by-NT
+function DMesh(p::AbstractMatrix{T}, t::AbstractMatrix{I}, geom::ElementGeometry) where {T, I <: Integer}
+    D = size(p, 1)
+    N = size(t, 1)
+    
+    p_vec = _mat_to_svec(p, Val(D))
+    t_vec = _mat_to_svec(t, Val(N))
+    
+    return DMesh(p_vec, t_vec, geom)
+end
+
+function DMesh(p::AbstractMatrix{T}, t::AbstractMatrix{I}) where {T, I <: Integer}
+    D = size(p, 1)
+    N = size(t, 1)
+    
+    return DMesh(p, t, find_elgeom(D, N))
+end
+
+# -------------------------------------------------------------------------
 # Display
 # -------------------------------------------------------------------------
 
@@ -73,19 +109,4 @@ function as_arrays(m::DMesh{D, T, G, N, I}) where {D, T, G, N, I}
     p_view = reinterpret(reshape, T, m.p)
     t_view = reinterpret(reshape, I, m.t)
     return p_view, t_view
-end
-
-# -------------------------------------------------------------------------
-# Other utilities
-# -------------------------------------------------------------------------
-
-# Global flag to track if we have warned the user yet
-const _has_warned_plot = Ref(false)
-
-function live_plot(args...)
-    if !_has_warned_plot[]
-        @warn "Live plotting was requested, but no plotting backend is loaded. Try `using Plots`."
-        _has_warned_plot[] = true
-    end
-    return nothing
 end
