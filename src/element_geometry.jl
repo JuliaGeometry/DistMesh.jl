@@ -86,5 +86,7 @@ subgeom(::Block,   newD) = Block{newD}()
 function find_elgeom(D, nv)
     nv == nvertices(Block{D}())   && return Block{D}()
     nv == nvertices(Simplex{D}()) && return Simplex{D}()
+    nv == nvertices(Block{D-1}())   && return Block{D-1}()
+    nv == nvertices(Simplex{D-1}()) && return Simplex{D-1}()
     error("Cannot determine element geometry for D=$D, nv=$nv")
 end
