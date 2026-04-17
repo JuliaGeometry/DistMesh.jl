@@ -413,6 +413,25 @@ find_nonmanifold_elements(face_map) = filter_elements_by_degree(face_map, x -> x
 find_boundary_elements(face_map)    = filter_elements_by_degree(face_map, x -> x == 1)
 
 """
+    is_manifold_mesh(m::DMesh) -> Bool
+
+Check if the mesh is manifold.
+
+A mesh is manifold if every face (edge in 2D, triangle in 3D) is shared by exactly 2 elements.
+This is equivalent to checking that the mesh has no non-manifold features (edges/faces touching more than 2 elements).
+
+# Arguments
+- `m`: The mesh to check.
+
+# Returns
+- `true` if the mesh is manifold, `false` otherwise.
+"""
+function is_manifold_mesh(m::DMesh)
+    e2f = face_element_map(m)
+    return all(length.(values(e2f)) .== 2)
+end
+
+"""
     foreach_face(f::Function, msh::DMesh)
 
 Iterate over all local faces of all elements in the mesh, applying the function `f`.
