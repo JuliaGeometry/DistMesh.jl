@@ -16,17 +16,17 @@ const Index3 = SVector{3, Int32}   # For Triangles
 A lightweight container for mesh data.
 - `D`: Spatial dimension (e.g., 2 for 2D coordinates).
 - `T`: Floating point type for coordinates (e.g., Float64).
-- `G`: Element geometry type (e.g., Simplex{2} or Block{3}).
+- `G`: Element topology type (e.g., Simplex{2} or Block{3}).
 - `N`: Number of vertices per element (e.g., 3 for triangles).
 - `I`: Integer type for indices (e.g., Int, Int32).
 """
-struct DMesh{D, T, G <: ElementGeometry, N, I <: Integer}
+struct DMesh{D, T, G <: ElementTopology, N, I <: Integer}
     p::Vector{SVector{D, T}}
     t::Vector{SVector{N, I}}
 
-    # Inner constructor strictly enforces N matches the geometry
-    function DMesh(p::Vector{SVector{D, T}}, t::Vector{SVector{N, I}}, geom::G) where {D, T, N, I, G <: ElementGeometry}
-        @assert N == nvertices(geom) "Mismatch: ElementGeometry expects $(nvertices(geom)) nodes, but elements have $N nodes."
+    # Inner constructor strictly enforces N matches the topology
+    function DMesh(p::Vector{SVector{D, T}}, t::Vector{SVector{N, I}}, geom::G) where {D, T, N, I, G <: ElementTopology}
+        @assert N == nvertices(geom) "Mismatch: ElementTopology expects $(nvertices(geom)) nodes, but elements have $N nodes."
         new{D, T, G, N, I}(p, t)
     end
 end
@@ -41,7 +41,7 @@ function DMesh(p::Vector{SVector{D, T}}, t::Vector{SVector{N, I}}) where {D, T, 
 end
 
 # 2. Outer constructor: Explicit geometry with NTuple inputs
-function DMesh(p::AbstractVector{<:NTuple{D, T}}, t::AbstractVector{<:NTuple{N, I}}, geom::ElementGeometry) where {D, T, N, I <: Integer}
+function DMesh(p::AbstractVector{<:NTuple{D, T}}, t::AbstractVector{<:NTuple{N, I}}, geom::ElementTopology) where {D, T, N, I <: Integer}
     return DMesh(SVector{D, T}.(p), SVector{N, I}.(t), geom)
 end
 
@@ -61,7 +61,7 @@ function _mat_to_svec(mat::AbstractMatrix{T}, ::Val{K}) where {T, K}
 end
 
 # 4. Outer constructor: Matrices D-by-NP and N-by-NT
-function DMesh(p::AbstractMatrix{T}, t::AbstractMatrix{I}, geom::ElementGeometry) where {T, I <: Integer}
+function DMesh(p::AbstractMatrix{T}, t::AbstractMatrix{I}, geom::ElementTopology) where {T, I <: Integer}
     D = size(p, 1)
     N = size(t, 1)
     

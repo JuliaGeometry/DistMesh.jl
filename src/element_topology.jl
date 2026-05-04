@@ -1,38 +1,38 @@
 ###########################################################################
-## Element geometry types
+## Element topology types
 
-"""Abstract base type for `D`-dimensional element geometries."""
-abstract type ElementGeometry{D} end
+"""Abstract base type for `D`-dimensional element topologies."""
+abstract type ElementTopology{D} end
 
 """Simplex element (point, line, triangle, tetrahedron)."""
-struct Simplex{D} <: ElementGeometry{D} end
+struct Simplex{D} <: ElementTopology{D} end
 
 """Tensor-product element (point, line, quadrilateral, hexahedron)."""
-struct Block{D} <: ElementGeometry{D} end
+struct Block{D} <: ElementTopology{D} end
 
 const geometry_types = (Simplex, Block)
 
 ###########################################################################
 ## Basic properties
 
-dim(::ElementGeometry{D}) where {D} = D::Int
+dim(::ElementTopology{D}) where {D} = D::Int
 
 name(::Simplex{D}) where {D} = D > 3 ? "$(D)D simplex" :
     ("point", "line", "triangle", "tetrahedron")[D+1]
 name(::Block{D}) where {D} = D > 3 ? "$(D)D block" :
     ("point", "line", "quadrilateral", "hexahedron")[D+1]
 
-Base.show(io::IO, eg::ElementGeometry) = print(io, "ElementGeometry: $(dim(eg))D $(name(eg))")
+Base.show(io::IO, eg::ElementTopology) = print(io, "ElementTopology: $(dim(eg))D $(name(eg))")
 
-nvertices(::ElementGeometry) = error("Not implemented")
+nvertices(::ElementTopology) = error("Not implemented")
 nvertices(::Simplex{D}) where {D} = D + 1
 nvertices(::Block{D}) where {D} = 2^D
 
-nfaces(::ElementGeometry) = error("Not implemented")
+nfaces(::ElementTopology) = error("Not implemented")
 nfaces(::Simplex{D}) where {D} = D + 1
 nfaces(::Block{D}) where {D} = 2 * D
 
-nedges(::ElementGeometry) = error("Not implemented")
+nedges(::ElementTopology) = error("Not implemented")
 nedges(::Simplex{D}) where {D} = binomial(D + 1, 2)
 nedges(::Block{D}) where {D} = D * 2^(D - 1)
 
@@ -43,7 +43,7 @@ nedges(::Block{D}) where {D} = D * 2^(D - 1)
 # Ordering follows standard VTK/ExodusII conventions (CCW/RHR).
 # 1D simplices break the opposite-node rule to match 1D blocks.
 
-facemap(::ElementGeometry) = error("Not implemented")
+facemap(::ElementTopology) = error("Not implemented")
 facemap(::Simplex{1}) = SA[SA[1], SA[2]]
 facemap(::Simplex{2}) = SA[SA[2, 3], SA[3, 1], SA[1, 2]]
 facemap(::Simplex{3}) = SA[SA[2, 3, 4], SA[1, 4, 3], SA[4, 1, 2], SA[3, 2, 1]]
@@ -59,7 +59,7 @@ facemap(::Block{3})   = SA[
     SA[5, 6, 7, 8]  # Top
 ]
 
-edgemap(::ElementGeometry) = error("Not implemented")
+edgemap(::ElementTopology) = error("Not implemented")
 edgemap(::Simplex{1}) = SA[SA[1, 2]]
 edgemap(::Simplex{2}) = SA[SA[2, 3], SA[3, 1], SA[1, 2]]
 edgemap(::Simplex{3}) = SA[
@@ -76,17 +76,17 @@ edgemap(::Block{3})   = SA[
 ]
 
 ###########################################################################
-## Sub-geometry and utilities
+## Sub-topology and utilities
 
-"""Return the `newD`-dimensional sub-geometry type of `eg`."""
+"""Return the `newD`-dimensional sub-topology type of `eg`."""
 subgeom(::Simplex, newD) = Simplex{newD}()
 subgeom(::Block,   newD) = Block{newD}()
 
-"""Infer element geometry from spatial dimension `D` and vertex count `nv`."""
+"""Infer element topology from spatial dimension `D` and vertex count `nv`."""
 function find_elgeom(D, nv)
     nv == nvertices(Block{D}())   && return Block{D}()
     nv == nvertices(Simplex{D}()) && return Simplex{D}()
     nv == nvertices(Block{D-1}())   && return Block{D-1}()
     nv == nvertices(Simplex{D-1}()) && return Simplex{D-1}()
-    error("Cannot determine element geometry for D=$D, nv=$nv")
+    error("Cannot determine element topology for D=$D, nv=$nv")
 end

@@ -5,14 +5,14 @@ using LinearAlgebra
 using Delaunator
 
 # --- Load Types ---
-include("element_geometry.jl")
+include("element_topology.jl")
 include("dmesh.jl")
 
 # --- Load Utilities and 2D Implementation ---
 include("distfuncs.jl")
-include("meshutils.jl")
+include("mesh_utils.jl")
 include("quality_metrics.jl")
-include("topology.jl")
+include("topology_utils.jl")
 include("mesh_improvement.jl")
 include("io.jl")
 include("plotting.jl")
@@ -20,7 +20,7 @@ include("distmesh2d.jl")
 
 # --- Exports ---
 
-export ElementGeometry, Simplex, Block
+export ElementTopology, Simplex, Block
 export nvertices, nfaces, nedges, facemap, edgemap
 
 export DMesh, as_arrays

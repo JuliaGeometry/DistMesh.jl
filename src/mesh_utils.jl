@@ -64,7 +64,7 @@ _cross_mag(u::SVector{3}, v::SVector{3}) = norm(cross(u, v))
 ### Element Volumes
 ################################################################################
 
-element_volume(::ElementGeometry, el) = error("Not implemented for this geometry")
+element_volume(::ElementTopology, el) = error("Not implemented for this topology")
 
 element_volume(::Simplex{1}, el) = norm(el[2] - el[1])
 element_volume(::Block{1}, el)   = norm(el[2] - el[1])
