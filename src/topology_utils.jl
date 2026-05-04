@@ -338,14 +338,51 @@ The degree is calculated as the number of unique edges connected to a given node
   where the `i`-th entry contains the degree of the `i`-th node.
 """
 function node_degrees(msh::DMesh)
-    edges = all_edges(msh) 
+    edges = all_edges(msh)
     deg = zeros(Int, length(msh.p))
-    
+
     for e in edges
         for i in e
             deg[i] += 1
         end
     end
-    
+
     return deg
+end
+
+"""
+    node_adjacency(msh::DMesh) -> Vector{Vector{I}}
+
+Compute the adjacency list of each node (vertex) in the mesh.
+
+Returns a vector of length equal to the number of nodes, where the `i`-th entry
+is a sorted list of the indices of all nodes connected to node `i` by an edge.
+
+The adjacency is derived directly from the element edge map, avoiding the
+intermediate sorted edge array that `all_edges` produces.
+
+# Arguments
+- `msh`: The mesh object.
+
+# Returns
+- A `Vector{Vector{I}}` where `I` is the mesh index type, of length `length(msh.p)`.
+  Each inner vector contains the sorted indices of the neighboring nodes.
+"""
+function node_adjacency(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
+    emap = edgemap(E())
+    adj = [I[] for _ in 1:length(msh.p)]
+
+    for el in msh.t
+        for e_local in emap
+            n1, n2 = el[e_local]
+            push!(adj[n1], n2)
+            push!(adj[n2], n1)
+        end
+    end
+
+    for a in adj
+        sort!(unique!(a))
+    end
+
+    return adj
 end
