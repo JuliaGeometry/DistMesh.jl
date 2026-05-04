@@ -31,7 +31,7 @@ clean_msh, = cleanup_mesh(dirty_msh)  # Ignoring the index output (ix)
 ```
 
 """
-function cleanup_mesh(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+function cleanup_mesh(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
     p, t = msh
 
     scaling = maximum(norm.(p))
@@ -53,7 +53,7 @@ function cleanup_mesh(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
 end
 
 """
-    element_face_neighbors(msh::DMesh{D,T,G,N,I}) -> Matrix{Tuple{I, I}}
+    element_face_neighbors(msh::DMesh{D,T,E,N,I}) -> Matrix{Tuple{I, I}}
 
 Compute element connectivities across faces.
 
@@ -62,11 +62,11 @@ is a tuple `(neighbor_element, neighbor_local_face)`.
 
 If a face is on the boundary, the entry is `(0, 0)`.
 """
-function element_face_neighbors(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+function element_face_neighbors(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
     t = msh.t
     nt = length(t)
     
-    fmap = facemap(G())
+    fmap = facemap(E())
     nf = length(fmap)       
     nfv = length(fmap[1])   
 
@@ -99,18 +99,18 @@ function element_face_neighbors(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
 end
 
 """
-    face_element_map(msh::DMesh{D,T,G,N,I}) -> Dict{SVector{nfv, I}, Vector{Tuple{I, I}}}
+    face_element_map(msh::DMesh{D,T,E,N,I}) -> Dict{SVector{nfv, I}, Vector{Tuple{I, I}}}
 
 Compute the mapping from faces to all connected elements. 
 
 Returns a dictionary where each key is a sorted `SVector` representing the face, 
 and the value is a vector of tuples `(element_idx, local_face_idx)`.
 """
-function face_element_map(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+function face_element_map(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
     t = msh.t
     nt = length(t)
     
-    fmap = facemap(G())
+    fmap = facemap(E())
     nf = length(fmap)       
     nfv = length(fmap[1])   
 
@@ -188,10 +188,10 @@ foreach_face(msh) do iel, jf, jel, map
     end
 end
 """
-function foreach_face(f::Function, msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
+function foreach_face(f::Function, msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
     nb = element_face_neighbors(msh)
     nt = length(msh.t)
-    map = facemap(G())
+    map = facemap(E())
     nf = length(map)
 
     for iel in 1:nt
@@ -218,8 +218,8 @@ Returns a list of all mesh faces that are not shared by two elements.
 # Returns
 - A `Vector` of `SVector`s, where each `SVector` contains the node indices of a boundary face.
 """
-function boundary_faces(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
-    map = facemap(G())
+function boundary_faces(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
+    map = facemap(E())
     nfv = length(map[1])
     nt = length(msh.t)
     
@@ -256,8 +256,8 @@ not shared by another element).
     1. `faces`: A `Vector` of `SVector`s, where each `SVector` contains the node indices of a unique face.
     2. `boundary_idx`: A `Vector{Int}` containing the corresponding indices of the boundary faces within the `faces` array.
 """
-function all_faces(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
-    nfv = length(facemap(G())[1])
+function all_faces(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
+    nfv = length(facemap(E())[1])
     
     faces = SVector{nfv,I}[]
     boundary_idx = Int[]
@@ -305,8 +305,8 @@ and returns a list of unique edges. Works for both 2D and 3D meshes.
 # Returns
 - A `Vector` of 2-element `SVector`s representing the unique edges in the mesh.
 """
-function all_edges(msh::DMesh{D,T,G,N,I}) where {D,T,G,N,I}
-    emap = edgemap(G())
+function all_edges(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
+    emap = edgemap(E())
     
     total_edges = length(msh.t) * length(emap)
     edges = Vector{SVector{2, I}}(undef, total_edges)

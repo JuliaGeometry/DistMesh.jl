@@ -130,10 +130,10 @@ default_quality_metric(::Block)   = element_quality_mean_ratio
 ################################################################################
 
 """
-    element_qualities(m::DMesh; metric=default_quality_metric(G()))
+    element_qualities(m::DMesh; metric=default_quality_metric(E()))
 
 Return a `Vector` of quality metrics for every element in the mesh. 
 """
-function element_qualities(m::DMesh{D, T, G}; metric=default_quality_metric(G())) where {D, T, G}
+function element_qualities(m::DMesh{D, T, E}; metric=default_quality_metric(E())) where {D, T, E}
     return collect(element_map(metric, m))
 end

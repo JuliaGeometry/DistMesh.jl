@@ -22,7 +22,7 @@ name(::Simplex{D}) where {D} = D > 3 ? "$(D)D simplex" :
 name(::Block{D}) where {D} = D > 3 ? "$(D)D block" :
     ("point", "line", "quadrilateral", "hexahedron")[D+1]
 
-Base.show(io::IO, eg::ElementTopology) = print(io, "ElementTopology: $(dim(eg))D $(name(eg))")
+Base.show(io::IO, et::ElementTopology) = print(io, "ElementTopology: $(dim(et))D $(name(et))")
 
 nvertices(::ElementTopology) = error("Not implemented")
 nvertices(::Simplex{D}) where {D} = D + 1
@@ -78,7 +78,7 @@ edgemap(::Block{3})   = SA[
 ###########################################################################
 ## Sub-topology and utilities
 
-"""Return the `newD`-dimensional sub-topology type of `eg`."""
+"""Return the `newD`-dimensional sub-topology type of `et`."""
 subgeom(::Simplex, newD) = Simplex{newD}()
 subgeom(::Block,   newD) = Block{newD}()
 

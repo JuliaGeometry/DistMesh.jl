@@ -32,7 +32,7 @@ function read_stl(fname)
 end
 
 """
-    write_ply(fname, msh::DMesh{D,T,G,N}) where {D,T,G,N}
+    write_ply(fname, msh::DMesh{D,T,E,N}) where {D,T,E,N}
 
 Export mesh to PLY (Polygon File Format) file.
 
@@ -40,7 +40,7 @@ The PLY format is written in ASCII 1.0 format with vertices and faces.
 Vertex indices are converted from Julia's 1-based indexing to PLY's 0-based indexing.
 
 # Arguments
-- `msh::DMesh{D,T,G,N}`: Mesh to export
+- `msh::DMesh{D,T,E,N}`: Mesh to export
 - `fname`: Output filename
 
 # Example
@@ -48,7 +48,7 @@ Vertex indices are converted from Julia's 1-based indexing to PLY's 0-based inde
 write_ply("output.ply", msh)
 ```
 """
-function write_ply(fname, msh::DMesh{D,T,G,N}) where {D,T,G,N}
+function write_ply(fname, msh::DMesh{D,T,E,N}) where {D,T,E,N}
     nv = length(msh.p)
     nf = length(msh.t)
     

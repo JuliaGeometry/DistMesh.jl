@@ -38,16 +38,16 @@ huniform(p) = 1
 ################################################################################
 
 """
-    element_map(f, msh::DMesh{D, T, G})
+    element_map(f, msh::DMesh{D, T, E})
 
-Return a generator that lazily applies `f(G(), nodes)` to the nodes of each 
+Return a generator that lazily applies `f(E(), nodes)` to the nodes of each 
 element in the mesh. `nodes` is an `SVector` of the physical coordinates.
 
 Example:
 `total_vol = sum(element_map(element_volume, msh))`
 """
-function element_map(f, msh::DMesh{D, T, G}) where {D, T, G}
-    return (f(G(), msh.p[el]) for el in msh.t)
+function element_map(f, msh::DMesh{D, T, E}) where {D, T, E}
+    return (f(E(), msh.p[el]) for el in msh.t)
 end
 
 using LinearAlgebra
