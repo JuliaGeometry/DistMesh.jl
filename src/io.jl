@@ -114,7 +114,7 @@ function read_ply(fname)
             
             if startswith(line, "element vertex")
                 nv = parse(Int, split(line)[3])
-            elseif startswith(line, "property float")
+            elseif occursin(r"^property (float|double) ([xyzw])$", line)
                 dim += 1
             end
         end
@@ -124,7 +124,7 @@ function read_ply(fname)
         for i in 1:nv
             line = readline(io)
             coords = parse.(Float64, split(strip(line)))
-            p_data[i] = tuple(coords...)
+            p_data[i] = tuple(coords[1:dim]...)
         end
         
         # Read first face to determine element size N
