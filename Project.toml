@@ -21,6 +21,7 @@ DistMeshPlotsExt = "Plots"
 [compat]
 Makie = "0.21, 0.22, 0.23, 0.24"
 Delaunator = "0.1"
+GeometryBasics = "0.5"
 LinearAlgebra = "1"
 Plots = "1"
 StaticArrays = "1.9"
