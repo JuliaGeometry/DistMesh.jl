@@ -1,0 +1,24 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite the article below."
+authors:
+  - family-names: "Persson"
+    given-names: "Per-Olof"
+title: "DistMesh.jl"
+version: 0.2.0
+url: "https://github.com/JuliaGeometry/DistMesh.jl"
+preferred-citation:
+  type: article
+  authors:
+  - family-names: "Persson"
+    given-names: "Per-Olof"
+  - family-names: "Strang"
+    given-names: "Gilbert"
+  doi: "10.1137/S0036144503429121"
+  journal: "SIAM Review"
+  title: "A simple mesh generator in MATLAB"
+  volume: 46
+  number: 2
+  start: 329
+  end: 345
+  year: 2004
+  

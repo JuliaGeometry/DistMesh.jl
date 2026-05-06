@@ -1,11 +1,4 @@
 ########################################################################
-# Internal Type Aliases
-
-const Point2d = SVector{2, Float64}
-const Index2 = SVector{2, Int32}   # For Edges
-const Index3 = SVector{3, Int32}   # For Triangles
-
-########################################################################
 # Utility functions
 
 barvectors(p, bars) = [ p[bar[1]] - p[bar[2]] for bar in bars ]

@@ -39,6 +39,38 @@ function check_mesh(msh::DMesh; np::Int=0, nt::Int=0, area::Real=0.0, areatol::R
     end
 end
 
+@testset "Simple Mesh Properties" begin
+    p = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    t = [(1, 2, 3), (1, 3, 4)]
+    msh = DMesh(p, t)
+
+    # 1. element_face_neighbors
+    nb = element_face_neighbors(msh)
+    @test nb == [(0,0) (0,0); (2,3) (0,0); (0,0) (1,2)]
+
+    # 2. boundary_faces (bedges)
+    normalize_edges(v) = sort!(collect.(v))
+    
+    bedges = boundary_faces(msh)
+    expected_bedges = [[2, 3], [1, 2], [3, 4], [4, 1]]
+    @test normalize_edges(bedges) == normalize_edges(expected_bedges)
+
+    # 3. all_faces (edges)
+    faces, boundary_idx = all_faces(msh)
+    expected_faces = [[2, 3], [3, 1], [1, 2], [3, 4], [4, 1]]
+    @test normalize_edges(faces) == normalize_edges(expected_faces)
+    @test normalize_edges(faces[boundary_idx]) == normalize_edges(expected_bedges)
+
+    # 4. boundary_nodes (bnodes)
+    bnodes = boundary_nodes(msh)
+    expected_bnodes = [2, 3, 1, 4]
+    @test sort(bnodes) == sort(expected_bnodes)
+
+    # 5. node_degrees (degree)
+    degree = node_degrees(msh)
+    @test degree == [3, 2, 3, 2]
+end
+
 @testset "Unit Circle Mesh" begin
     msh = distmesh2d(dcircle, huniform, 0.2, ((-1,-1), (1,1)))
     check_mesh(msh, np=88, nt=143)
@@ -69,7 +101,7 @@ const EXAMPLES_DIR = joinpath(@__DIR__, "..", "examples")
             path = joinpath(EXAMPLES_DIR, file)
             content = read(path, String)
             
-            # Swap GLMakie -> CairoMakie (for Headless tests)
+            # Swap GLMakie -> CairoMakie for headless/CI tests (no display required)
             content = replace(content, "using GLMakie" => "using CairoMakie")
 
             # Run the code

@@ -5,8 +5,9 @@ using Plots
 
 const MESH_COLOR = Plots.RGBX(0.8, 0.9, 1.0)
 
-function Plots.plot(m::DMesh{2,T,N,I}; args...) where {T,N,I}
-    pxy(d) = [ tix==0 ? NaN : m.p[tt[tix]][d] for tix in (1,2,3,1,0), tt in m.t ]
+function Plots.plot(m::DMesh{2,T,E,N,I}; args...) where {T,E,N,I}
+    loopix = vcat(1:N,1,0)
+    pxy(d) = [ tix==0 ? NaN : m.p[tt[tix]][d] for tix in loopix, tt in m.t ]
     args = (args...,
             seriestype=:shape,
             aspect_ratio=:equal,
