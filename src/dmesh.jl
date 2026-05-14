@@ -5,6 +5,7 @@ const Point2d = SVector{2, Float64}
 const Point3d = SVector{3, Float64}
 const Index2 = SVector{2, Int32}   # For Edges
 const Index3 = SVector{3, Int32}   # For Triangles
+const Index4 = SVector{4, Int32}   # For Quads
 
 # -------------------------------------------------------------------------
 # Mesh Data Structures and Helpers
