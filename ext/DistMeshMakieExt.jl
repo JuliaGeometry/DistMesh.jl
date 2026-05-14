@@ -66,7 +66,8 @@ end
 # Generic fallback for 2D polygon meshes (Quads, etc.)
 function Makie.plot(m::DMesh{2}; args...)
     f, ax = get_canvas()
-    polys = [Polygon([Point2f(m.p[i]) for i in el]) for el in m.t]
+    empty!(ax)
+    polys = [GeometryBasics.Polygon([GeometryBasics.Point2f(m.p[i]) for i in el]) for el in m.t]
     poly!(ax, polys, color=MESH_COLOR, strokewidth=1)
     return f
 end
