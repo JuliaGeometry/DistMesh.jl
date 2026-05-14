@@ -3,6 +3,7 @@ module DistMesh
 using StaticArrays
 using LinearAlgebra
 using Delaunator
+using BlossomV
 
 # --- Load Types ---
 include("element_topology.jl")
@@ -17,6 +18,7 @@ include("mesh_improvement.jl")
 include("io.jl")
 include("plotting.jl")
 include("distmesh2d.jl")
+include("quad_meshing.jl")
 
 # --- Exports ---
 
@@ -38,6 +40,9 @@ export read_stl, write_stl, read_ply, write_ply
 export element_qualities, element_volumes, find_elems, cleanup_mesh
 export element_face_neighbors, face_element_map, find_boundary_elements, find_nonmanifold_elements, is_manifold_mesh
 export all_faces, boundary_faces, boundary_nodes, all_edges, node_degrees, node_adjacency, node_element_map
+export segcollect
 export trimesh_flip!, trimesh_collapse
+
+export tri2quad, quad_project_and_smooth!
 
 end # module

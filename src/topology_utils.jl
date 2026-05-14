@@ -326,3 +326,53 @@ function node_element_map(msh::DMesh{D,T,E,N,I}) where {D,T,E,N,I}
 
     return nemap
 end
+
+"""
+    segcollect(bedges::Vector{SVector{2,I}}) -> Vector{Vector{I}}
+
+Stitch unordered boundary edges into ordered, closed boundary loops.
+
+Each returned segment is a vector of node indices forming a closed loop
+(the first node is NOT repeated at the end). The orientation follows the
+natural ordering of the boundary edges as returned by `boundary_faces`.
+
+This is useful for computing interior angles at boundary nodes or for
+identifying corners in the boundary geometry.
+"""
+function segcollect(bedges::Vector{SVector{2,I}}) where {I <: Integer}
+    # Build adjacency map: node -> [neighbor1, neighbor2] (boundary edges only)
+    adj = Dict{I, Vector{I}}()
+    for e in bedges
+        push!(get!(adj, e[1], I[]), e[2])
+        push!(get!(adj, e[2], I[]), e[1])
+    end
+
+    visited_edges = Set{Tuple{I,I}}()
+    segments = Vector{Vector{I}}()
+
+    for e in bedges
+        key = (min(e[1], e[2]), max(e[1], e[2]))
+        key in visited_edges && continue
+
+        # Start a new segment from e[1] → e[2]
+        seg = I[e[1]]
+        push!(visited_edges, key)
+        curr = e[2]
+        prev = e[1]
+
+        while curr != seg[1]
+            push!(seg, curr)
+            nbrs = adj[curr]
+            # Pick the neighbor that isn't where we came from
+            nxt = nbrs[1] == prev ? nbrs[2] : nbrs[1]
+            key2 = (min(curr, nxt), max(curr, nxt))
+            push!(visited_edges, key2)
+            prev = curr
+            curr = nxt
+        end
+
+        push!(segments, seg)
+    end
+
+    return segments
+end
