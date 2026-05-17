@@ -50,6 +50,20 @@ function to_makie_mesh(m::DMesh{3,T,Simplex{2}}) where {T}
     return GeometryBasics.normal_mesh(GeometryBasics.Mesh(pts, faces))
 end
 
+# Quad mesh: split each quad (CCW: 1-2-3-4) into two triangles (1,2,3) and (1,3,4)
+function to_makie_mesh(m::DMesh{2,T,Block{2}}) where {T}
+    p, t = as_arrays(m)
+    pts = GeometryBasics.Point2f[GeometryBasics.Point2f(col) for col in eachcol(p)]
+    faces = GeometryBasics.GLTriangleFace[]
+    sizehint!(faces, 2 * size(t, 2))
+    for col in eachcol(t)
+        a, b, c, d = col
+        push!(faces, GeometryBasics.GLTriangleFace(a, b, c))
+        push!(faces, GeometryBasics.GLTriangleFace(a, c, d))
+    end
+    return GeometryBasics.normal_mesh(GeometryBasics.Mesh(pts, faces))
+end
+
 # ---------------------------------------------------------
 # 2. Standard Plot (Static)
 # ---------------------------------------------------------
@@ -76,6 +90,20 @@ end
 # 3. Live Plot (Dynamic / Animation)
 # ---------------------------------------------------------
 
+# Returns true if the mesh's bounding box has moved outside the current view,
+# or the view has grown more than 2x larger than the mesh in any dimension.
+# Cheap enough to run every frame.
+function _needs_relimit(m::DMesh{2}, ax)
+    p, _ = as_arrays(m)
+    xmin, xmax = extrema(view(p, 1, :))
+    ymin, ymax = extrema(view(p, 2, :))
+    lims = ax.finallimits[]
+    lx, ly = lims.origin[1], lims.origin[2]
+    rx, ry = lx + lims.widths[1], ly + lims.widths[2]
+    return xmin < lx || xmax > rx || ymin < ly || ymax > ry ||
+           (rx - lx) > 2 * (xmax - xmin) || (ry - ly) > 2 * (ymax - ymin)
+end
+
 function DistMesh.live_plot(m::DMesh{2,T,Simplex{2}}) where {T}
     # Check if the active backend is interactive
     backend_name = string(Makie.current_backend())
@@ -89,23 +117,46 @@ function DistMesh.live_plot(m::DMesh{2,T,Simplex{2}}) where {T}
     if isempty(ax.scene.plots)
         poly!(ax, fast_mesh, color=MESH_COLOR, strokewidth=1)
         autolimits!(ax)
-        display(f) 
+        display(f)
     else
         plt = ax.scene.plots[1]
         plt[1][] = fast_mesh
+        _needs_relimit(m, ax) && autolimits!(ax)
     end
-    
+
     # sleep(0.01) # You might even want to skip the sleep if it's not GLMakie to speed up the dummy loop!
     if occursin("GLMakie", backend_name) || occursin("WGLMakie", backend_name)
         sleep(0.01)
     end
-    
+
     return f
 end
 
-function DistMesh.live_plot(m::DMesh{2})
-    @warn "Live plotting is currently only supported for triangle meshes (Simplex{2})."
-    return nothing
+function DistMesh.live_plot(m::DMesh{2,T,Block{2}}) where {T}
+    backend_name = string(Makie.current_backend())
+    if !occursin("GLMakie", backend_name) && !occursin("WGLMakie", backend_name)
+        @warn "Live plotting requires an interactive backend. Switch to `using GLMakie` for animations." maxlog=1
+    end
+
+    f, ax = get_canvas()
+    polys = [GeometryBasics.Polygon([GeometryBasics.Point2f(m.p[i]) for i in el]) for el in m.t]
+
+    if isempty(ax.scene.plots)
+        poly!(ax, polys, color=MESH_COLOR, strokewidth=1)
+        autolimits!(ax)
+        display(f)
+    else
+        # poly!'s input observable is typed as Vector{Polygon}, so in-place update works.
+        plt = ax.scene.plots[1]
+        plt[1][] = polys
+        _needs_relimit(m, ax) && autolimits!(ax)
+    end
+
+    if occursin("GLMakie", backend_name) || occursin("WGLMakie", backend_name)
+        sleep(0.01)
+    end
+
+    return f
 end
 
 # ---------------------------------------------------------
