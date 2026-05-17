@@ -6,7 +6,6 @@
 #   Stage 2: Boundary triangle collapse (union-find node merging)
 #   Stage 3: Optional Catmull-Clark refinement (if triangles survive stage 2)
 #   Stage 4: Greedy quad collapse (depth-weighted diagonal collapse)
-#   Stage 5: Dart untangling (analytical Jacobian fix for inverted quads)
 ################################################################################
 
 ################################################################################
@@ -16,6 +15,7 @@
 struct _QuadTopology
     is_corner      :: Vector{Bool}
     is_boundary    :: Vector{Bool}
+    nb             :: Matrix{Tuple{Int32,Int32}}
     element_depths :: Vector{Int}
     node_depths    :: Vector{Int}
     adj            :: Vector{Vector{Int}}
@@ -37,9 +37,8 @@ function _corner_node_ids(p::Vector{<:SVector}, pfix)
 end
 
 # BFS element depths from boundary elements (depth 0 = on boundary)
-function _element_depths(msh::DMesh)
-    nb = element_face_neighbors(msh)
-    nt = length(msh.t)
+function _element_depths(nb::Matrix{Tuple{Int32,Int32}})
+    nt = size(nb, 2)
     nf = size(nb, 1)
     D = fill(-1, nt)
     queue = Int[]
@@ -94,7 +93,7 @@ function _target_degrees(msh::DMesh, is_boundary::Vector{Bool}, is_corner::Vecto
     for i in 1:np
         if is_boundary[i] && !is_corner[i]
             ideal_d[i] = 3
-            min_d[i]   = 2
+            min_d[i]   = 3
         end
     end
 
@@ -138,6 +137,8 @@ function _QuadTopology(msh::DMesh, pfix)
     is_corner = falses(np)
     is_corner[corner_ids] .= true
 
+    nb = element_face_neighbors(msh)
+
     adj = [Int.(a) for a in node_adjacency(msh)]
     deg = node_degrees(msh)
     ideal_d, min_d = _target_degrees(msh, Vector{Bool}(is_boundary), Vector{Bool}(is_corner))
@@ -145,7 +146,8 @@ function _QuadTopology(msh::DMesh, pfix)
     return _QuadTopology(
         Vector{Bool}(is_corner),
         Vector{Bool}(is_boundary),
-        _element_depths(msh),
+        nb,
+        _element_depths(nb),
         _node_depths(Vector{Bool}(is_boundary), adj),
         adj,
         deg,
@@ -190,6 +192,7 @@ function _dual_mesh_edges_weighted(msh::DMesh, topo::_QuadTopology, nb::Matrix)
     d_min       = topo.min_degree
     D           = topo.element_depths
     is_boundary = topo.is_boundary
+    is_corner   = topo.is_corner
 
     w_base              = 0.0
     gamma               = 1000.0
@@ -229,9 +232,8 @@ Stage 1: Match pairs of adjacent triangles into quads via Blossom perfect matchi
 on the weighted dual graph. Returns quad connectivity, unmatched triangle
 connectivity, and the global indices of unmatched triangles.
 """
-function match_tri2quad(msh::DMesh, pfix)
-    topo = _QuadTopology(msh, pfix)
-    nb   = element_face_neighbors(msh)
+function match_tri2quad(msh::DMesh, topo)
+    nb   = topo.nb
     nt   = length(msh.t)
 
     g   = _dual_mesh_edges_weighted(msh, topo, nb)
@@ -267,19 +269,38 @@ end
 # Stage 2: Boundary triangle collapse
 ################################################################################
 
-function _collapse_boundary_triangles(msh::DMesh, q::Vector{Index4},
-                                       t_unmatched::Vector{<:SVector{3}},
-                                       t_global_idx::Vector{Int},
-                                       is_corner::Vector{Bool})
-    np  = length(msh.p)
-    nb  = element_face_neighbors(msh)
-    emap = edgemap(Simplex{2}())
-
-    parent      = collect(1:np)
-    corner_root = zeros(Int, np)
-    for i in 1:np
-        is_corner[i] && (corner_root[i] = i)
+# Node degrees for a mixed quad+triangle mesh, counting each shared edge once.
+function _mixed_node_degrees(np::Int, q::Vector{Index4}, t::Vector{<:SVector{3}})
+    edges = Set{Tuple{Int,Int}}()
+    for quad in q
+        a, b, c, d = Int(quad[1]), Int(quad[2]), Int(quad[3]), Int(quad[4])
+        push!(edges, minmax(a,b)); push!(edges, minmax(b,c))
+        push!(edges, minmax(c,d)); push!(edges, minmax(d,a))
     end
+    for tri in t
+        a, b, c = Int(tri[1]), Int(tri[2]), Int(tri[3])
+        push!(edges, minmax(a,b)); push!(edges, minmax(b,c)); push!(edges, minmax(c,a))
+    end
+    deg = zeros(Int, np)
+    for (a, b) in edges; deg[a] += 1; deg[b] += 1; end
+    return deg
+end
+
+function _collapse_boundary_triangles(msh::DMesh, topo,
+                                      q::Vector{Index4},
+                                      t_unmatched::Vector{<:SVector{3}},
+                                      t_global_idx::Vector{Int})
+    np         = length(msh.p)
+    emap       = edgemap(Simplex{2}())
+    nb         = topo.nb
+    is_corner  = topo.is_corner
+    min_degree = topo.min_degree
+    degree     = _mixed_node_degrees(np, q, t_unmatched)
+
+    # Union-find with corner pinning:
+    # corner_root[i] != 0 means root i represents the pfix corner at that index.
+    parent      = collect(1:np)
+    corner_root = [is_corner[i] ? i : 0 for i in 1:np]
 
     find_root(i) = begin
         while parent[i] != i; i = parent[i]; end
@@ -297,48 +318,54 @@ function _collapse_boundary_triangles(msh::DMesh, q::Vector{Index4},
         corner_root[ri] = max(corner_root[ri], corner_root[rj])
     end
 
-    # Merge the two nodes on the first boundary edge of each unmatched triangle
+    # For each unmatched triangle, collapse its first valid boundary edge:
+    # valid = the opposite node retains degree >= its minimum after losing this triangle.
+    # Degrees are updated incrementally so later decisions see accurate values.
     for gt in t_global_idx
-        e = findfirst(ie -> Int(nb[ie, gt][1]) == 0, 1:3)
-        e !== nothing && union!(Int(msh.t[gt][emap[e][1]]), Int(msh.t[gt][emap[e][2]]))
+        for ie in 1:3
+            Int(nb[ie, gt][1]) == 0 || continue
+            a        = Int(msh.t[gt][emap[ie][1]])
+            b        = Int(msh.t[gt][emap[ie][2]])
+            opp      = Int(msh.t[gt][ie])   # local node opposite to face ie in Simplex{2}
+            opp_root = find_root(opp)
+            degree[opp_root] - 1 >= min_degree[opp] || continue
+            ra = find_root(a)
+            rb = find_root(b)
+            union!(a, b)
+            r_merged = find_root(a)
+            r_other  = r_merged == ra ? rb : ra
+            degree[r_merged] = degree[ra] + degree[rb] - 2  # gt removed; b's elements absorbed
+            degree[r_other]  = 0                            # no longer a root
+            degree[opp_root] -= 1                           # gt removed from opp's neighbourhood
+            break
+        end
     end
 
-    # Path-compress
-    for i in 1:np
-        parent[i] = find_root(i)
-    end
-
-    # Build old→new ID map and new coordinates
+    # Path-compress, then assign contiguous new IDs to the surviving roots.
+    for i in 1:np; parent[i] = find_root(i); end
     unique_roots = unique(parent)
-    old_to_new   = zeros(Int, np)
-    new_p        = Vector{Point2d}(undef, length(unique_roots))
+    root_to_new  = Dict(r => id for (id, r) in enumerate(unique_roots))
+    old_to_new   = [root_to_new[parent[i]] for i in 1:np]
 
-    for (new_id, root) in enumerate(unique_roots)
-        members = findall(==(root), parent)
-        for old_id in members
-            old_to_new[old_id] = new_id
-        end
-        if corner_root[root] != 0
-            new_p[new_id] = msh.p[corner_root[root]]
-        else
-            new_p[new_id] = sum(msh.p[m] for m in members) / length(members)
-        end
+    # New node positions: corners snap to their pfix coordinate; others are
+    # the centroid of merged members (single O(n) pass, no per-root findall).
+    p_sum = fill(zero(eltype(msh.p)), length(unique_roots))
+    p_cnt = zeros(Int, length(unique_roots))
+    for i in 1:np
+        nid = old_to_new[i]
+        p_sum[nid] += msh.p[i]
+        p_cnt[nid] += 1
     end
+    new_p = [corner_root[r] != 0 ? msh.p[corner_root[r]] : p_sum[id] / p_cnt[id]
+             for (id, r) in enumerate(unique_roots)]
 
-    # Remap quads; drop degenerate (repeated-node) quads
-    new_q = Index4[]
-    for quad in q
-        rq = Index4(old_to_new[quad[1]], old_to_new[quad[2]],
-                    old_to_new[quad[3]], old_to_new[quad[4]])
-        length(unique(rq)) == 4 && push!(new_q, rq)
-    end
-
-    # Remap surviving triangles; drop degenerate
-    new_t = Index3[]
-    for tri in t_unmatched
-        rt = Index3(old_to_new[tri[1]], old_to_new[tri[2]], old_to_new[tri[3]])
-        length(unique(rt)) == 3 && push!(new_t, rt)
-    end
+    # Remap connectivity; drop degenerate (repeated-node) elements.
+    new_q = filter(rq -> length(unique(rq)) == 4,
+                   [Index4(old_to_new[quad[1]], old_to_new[quad[2]],
+                           old_to_new[quad[3]], old_to_new[quad[4]]) for quad in q])
+    new_t = filter(rt -> length(unique(rt)) == 3,
+                   [Index3(old_to_new[tri[1]], old_to_new[tri[2]],
+                           old_to_new[tri[3]]) for tri in t_unmatched])
 
     return new_p, new_q, new_t
 end
@@ -425,6 +452,7 @@ end
 
 function _greedy_quad_collapse(msh::DMesh, pfix; verbose=false)
     topo = _QuadTopology(msh, pfix)
+    np = length(msh.p)
 
     p         = copy(msh.p)
     quads     = [[Int(n) for n in q] for q in msh.t]  # mutable Vector{Vector{Int}}
@@ -435,6 +463,7 @@ function _greedy_quad_collapse(msh::DMesh, pfix; verbose=false)
     is_corner   = topo.is_corner
     adj = [Int.(a) for a in node_adjacency(msh)]
     D   = _node_depths(is_boundary, adj)
+    final_node = collect(1:np)  # tracks which node each node was merged into
 
     for pass in 1:100
         best_dE, best_a, best_c, best_b, best_d = 0.0, 0, 0, 0, 0
@@ -464,6 +493,7 @@ function _greedy_quad_collapse(msh::DMesh, pfix; verbose=false)
         deg[a] += deg[c] - 2
         deg[best_b] -= 1
         deg[best_d] -= 1
+        final_node[c] = a
 
         for j in 1:length(quads)
             is_dead[j] && continue
@@ -480,81 +510,38 @@ function _greedy_quad_collapse(msh::DMesh, pfix; verbose=false)
 
     live = findall(.!is_dead)
     live_quads = [Index4(quads[j]...) for j in live]
-    return cleanup_mesh(DMesh(p, live_quads)).msh
-end
 
-################################################################################
-# Stage 5: Dart untangling
-################################################################################
-
-function _untangle_darts!(p::Vector{Point2d}, q::Vector{Index4},
-                           is_boundary::Vector{Bool}, is_corner::Vector{Bool};
-                           eps_rel=1e-1)
-    fixes = 0
-
-    calc_J(a, b, d) = (p[b][1]-p[a][1])*(p[d][2]-p[a][2]) -
-                      (p[b][2]-p[a][2])*(p[d][1]-p[a][1])
-    dist_sq(n1, n2) = (p[n2][1]-p[n1][1])^2 + (p[n2][2]-p[n1][2])^2
-
-    for quad in q
-        n1, n2, n3, n4 = Int(quad[1]), Int(quad[2]), Int(quad[3]), Int(quad[4])
-        J1 = calc_J(n1, n2, n4)
-        J2 = calc_J(n2, n3, n1)
-        J3 = calc_J(n3, n4, n2)
-        J4 = calc_J(n4, n1, n3)
-
-        min_J, min_idx = findmin(SA[J1, J2, J3, J4])
-        a, b, _, d = if min_idx == 1; (n1, n2, n3, n4)
-                     elseif min_idx == 2; (n2, n3, n4, n1)
-                     elseif min_idx == 3; (n3, n4, n1, n2)
-                     else                 (n4, n1, n2, n3)
-                     end
-
-        eps_abs = eps_rel * 0.5 * (dist_sq(a, b) + dist_sq(a, d))
-        min_J > eps_abs - 1e-8 && continue
-        fixes += 1
-
-        if !is_boundary[a]
-            gx = p[b][2] - p[d][2]
-            gy = p[d][1] - p[b][1]
-            norm_sq = gx^2 + gy^2
-            if norm_sq > 1e-12
-                step = (eps_abs - min_J) / norm_sq
-                p[a] = p[a] + Point2d(step * gx, step * gy)
-            end
-        elseif is_corner[a]
-            # Corner locked: move an interior neighbor instead
-            move_node = !is_boundary[b] ? b : (!is_boundary[d] ? d : 0)
-            if move_node != 0
-                if move_node == b
-                    gx = p[d][2] - p[a][2];  gy = p[a][1] - p[d][1]
-                else
-                    gx = p[a][2] - p[b][2];  gy = p[b][1] - p[a][1]
-                end
-                norm_sq = gx^2 + gy^2
-                if norm_sq > 1e-12
-                    step = (eps_abs - min_J) / norm_sq
-                    p[move_node] = p[move_node] + Point2d(step * gx, step * gy)
-                end
-            end
-        end
-        # Non-corner boundary reflex: skip silently (should be rare after smoothing)
+    # Path-compress final_node so chained merges (c→a, a→x) resolve to their root.
+    for i in 1:np
+        j = i
+        while final_node[j] != j; j = final_node[j]; end
+        final_node[i] = j
     end
 
-    return fixes
-end
+    result = cleanup_mesh(DMesh(p, live_quads))
 
-function _untangle_darts_sweep!(p::Vector{Point2d}, q::Vector{Index4},
-                                 is_boundary::Vector{Bool}, is_corner::Vector{Bool};
-                                 eps_rel=1e-1, verbose=false)
-    for sweep in 1:10
-        fixes = _untangle_darts!(p, q, is_boundary, is_corner; eps_rel=eps_rel)
-        if fixes == 0
-            verbose && println("  Untangled in $sweep sweep(s).")
-            return
+    # Build old→new node map.
+    old_to_new = zeros(Int, np)
+    for (new_id, old_id) in enumerate(result.ix)
+        old_to_new[old_id] = new_id
+    end
+    # Merged/dead nodes: follow final_node to their surviving root.
+    for i in 1:np
+        old_to_new[i] == 0 && (old_to_new[i] = old_to_new[final_node[i]])
+    end
+    # Orphan nodes (in p but not referenced by any quad, e.g. triangle-only nodes):
+    # append them to the output mesh so their IDs remain valid.
+    np_out   = length(result.msh.p)
+    orphan_p = eltype(p)[]
+    for i in 1:np
+        if old_to_new[i] == 0
+            push!(orphan_p, p[i])
+            old_to_new[i] = np_out + length(orphan_p)
         end
     end
-    verbose && @warn "Untangler reached max sweeps; mesh may still contain inverted elements."
+    out_p = isempty(orphan_p) ? result.msh.p : vcat(result.msh.p, orphan_p)
+
+    return DMesh(out_p, result.msh.t), old_to_new
 end
 
 ################################################################################
@@ -568,43 +555,81 @@ Convert a triangular mesh to an all-quadrilateral mesh using a four-stage pipeli
 
 1. Topology-driven triangle matching via Blossom perfect matching
 2. Boundary triangle collapse via union-find node merging
-3. (Optional) Catmull-Clark refinement if triangles survive stage 2
-4. Greedy quad collapse to reduce degree irregularity
-5. Analytical dart untangling to fix inverted quads
+3. Greedy quad collapse to reduce degree irregularity (quads only; triangles held aside)
+4. (Optional) Catmull-Clark refinement if triangles survive stages 2–3
 
 `pfix` specifies the fixed corner node positions (same as passed to `distmesh2d`).
 """
-function tri2quad(tmsh::DMesh, pfix; eps_rel=0.1, verbose=false)
+function tri2quad(tmsh::DMesh, pfix=Point2d[]; eps_rel=0.1, verbose=false)
     # Stage 1: Match triangle pairs into quads
-    q, t, tix = match_tri2quad(tmsh, pfix)
+    topo = _QuadTopology(tmsh, pfix)
+    q, t, tix = match_tri2quad(tmsh, topo)
     verbose && println("Stage 1: $(length(q)) quads, $(length(t)) unmatched triangles")
 
     # Stage 2: Collapse unmatched boundary triangles
-    topo0 = _QuadTopology(tmsh, pfix)
-    new_p, new_q, new_t = _collapse_boundary_triangles(tmsh, q, t, tix, topo0.is_corner)
+    new_p, new_q, new_t = _collapse_boundary_triangles(tmsh, topo, q, t, tix)
     verbose && println("Stage 2: $(length(new_t)) triangle(s) survive after boundary collapse")
-#    return DMesh(new_p, new_t), DMesh(new_p, new_q)
 
-    # Stage 3: Catmull-Clark refinement if triangles remain
-    if !isempty(new_t)
-        verbose && @warn "$(length(new_t)) triangle(s) survived collapse; applying Catmull-Clark refinement"
-        qmsh = _catmull_clark_refine(new_p, new_q, new_t)
-    else
-        qmsh = DMesh(new_p, new_q)
+    # Stage 3: Greedy quad collapse on quads only; surviving triangles are held aside.
+    # Returns a node map so new_t can be remapped into the compacted mesh numbering.
+    qmsh, node_map = _greedy_quad_collapse(DMesh(new_p, new_q), pfix; verbose=verbose)
+    verbose && println("Stage 3: $(length(qmsh.t)) quads after collapse")
+
+    # Remap surviving triangles through the collapse node map.
+    surviving_t = filter(rt -> length(unique(rt)) == 3,
+                         [Index3(node_map[Int(tri[1])], node_map[Int(tri[2])], node_map[Int(tri[3])])
+                          for tri in new_t])
+
+    # Stage 4: Catmull-Clark refinement if triangles remain after collapse.
+    if !isempty(surviving_t)
+        @warn "$(length(surviving_t)) triangle(s) survived collapse; applying Catmull-Clark refinement"
+        qmsh = _catmull_clark_refine(qmsh.p, qmsh.t, surviving_t)
     end
 
-    # Stage 4: Greedy quad collapse
-    qmsh = _greedy_quad_collapse(qmsh, pfix; verbose=verbose)
-    verbose && println("Stage 4: $(length(qmsh.t)) quads after collapse")
-
-    # Stage 5: Untangle inverted quads
-    topo_q = _QuadTopology(qmsh, pfix)
-    p_mut  = copy(qmsh.p)
-    _untangle_darts_sweep!(p_mut, qmsh.t, topo_q.is_boundary, topo_q.is_corner;
-                            eps_rel=eps_rel, verbose=verbose)
-    return DMesh(p_mut, qmsh.t)
+    return qmsh
 end
 
-function quad_project_and_smooth!(qmsh::DMesh, fd, fh, pfix)
-    @warn "quad_project_and_smooth! is not yet implemented - doing nothing"
+
+function quad_project_and_smooth!(qmsh::DMesh, dfcn, hfcn, pfix=Point2d[];
+                    plotting = false,          # Optional live plotting
+                    maxiter = 10_000,          # When to terminate if no convergence
+)
+    deltat = 0.2
+    h0 = minimum(norm.(all_edges(qmsh)))
+    dptol = 1e-3 * h0
+    deps = sqrt(eps()) * h0
+
+    p = qmsh.p
+    corner_ids = _corner_node_ids(p, pfix)
+    boundary_ids = boundary_nodes(qmsh)
+    project_ids = setdiff(boundary_ids, corner_ids)
+    converged = false
+
+    bars1 = all_edges(qmsh)
+    bars2 = vcat([Index2(q[1], q[3]) for q in qmsh.t],
+                 [Index2(q[2], q[4]) for q in qmsh.t])
+
+    # Main loop
+    for iter = 1:maxiter
+        pold = copy(p)
+        for (bars,Fsc) in ((bars1,0.7), (bars2,0.7))
+            barvec = barvectors(p, bars)
+            L = norm.(barvec)
+            L0 = desiredlengths(p, bars, L, hfcn, Fsc)
+            F = L0 - L
+            p .+= deltat * total_node_forces(F, L, barvec, bars, length(p), corner_ids)
+        end
+
+        d = project_nodes!(p, dfcn, deps, project_ids)
+
+        plotting && live_plot(qmsh)
+
+        converged = maximum(norm.(p-pold); init=0.0) < dptol
+        converged && break
+    end
+    
+    converged || @warn "No convergence in maxiter=$maxiter iterations"
+
+    return nothing
 end
+
