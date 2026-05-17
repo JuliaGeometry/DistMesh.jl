@@ -35,30 +35,32 @@ function desiredlengths(p, bars, L, hfcn, Fscale)
     L0 = hbars * Fscale * sqrt(sum(L .^ 2) / sum(hbars .^ 2))
 end
 
-function density_control(p, L, L0, bars, nfix)
+ixfix(fix::Integer) = 1:fix
+ixfix(fix::Vector{<:Integer}) = fix
+
+function density_control(p, L, L0, bars, fix)
     # Density control - remove nodes that are too close
     pkeep = trues(length(p))
     foreach(bar -> pkeep[bar] .= false, bars[L0[:].>2*L[:]])
-    pkeep[1:nfix] .= true
+    pkeep[ixfix(fix)] .= true
     p = p[pkeep]
 end
 
-function total_node_forces(L, L0, barvec, bars, np, nfix)
+function total_node_forces(F, L, barvec, bars, np, fix)
     # Find all bar forces and accumulate at all nodes
-    F = max.(L0 .- L, 0.0)
     Fvec = F ./ L .* barvec
     Ftot = [ Point2d(0.0,0.0) for ip = 1:np ]
     for ibar in eachindex(bars)
         Ftot[bars[ibar][1]] += Fvec[ibar]
         Ftot[bars[ibar][2]] -= Fvec[ibar]
     end
-    Ftot[1:nfix] .*= 0.0
+    Ftot[ixfix(fix)] .*= 0.0
     Ftot
 end
 
-function project_nodes!(p, dfcn, deps)
+function project_nodes!(p, dfcn, deps, ix=nothing)
     d = dfcn.(p)
-    ix = findall(d .> 0)
+    ix = isnothing(ix) ? findall(d .> 0) : ix
     numgrad(f,x,fx) = (Point2d(f(x + Point2d(deps,0)), f(x + Point2d(0,deps))) .- fx) / deps
     dgrad = [ numgrad(dfcn, p[i], d[i]) for i in ix ]
     @. p[ix] -= d[ix] * dgrad / norm(dgrad)^2
@@ -201,7 +203,8 @@ function distmesh2d(dfcn, hfcn, h0, bbox, pfix=Point2d[];
         end
 
         # Compute forces and update nodes
-        dp = deltat * total_node_forces(L, L0, barvec, bars, length(p), nfix)
+        F = max.(L0 .- L, 0.0)
+        dp = deltat * total_node_forces(F, L, barvec, bars, length(p), nfix)
         p .+= dp
 
         # Project outside points back to boundary
