@@ -55,23 +55,40 @@ end
 ### Element Qualities - Block Elements
 ################################################################################
 
+_cross_signed(u::SVector{2}, v::SVector{2}) = u[1]*v[2] - u[2]*v[1]
+
+function _corner_jacobians_2d(e)
+    return SVector(_cross_signed(e[1], -e[4]), _cross_signed(e[2], -e[1]),
+                   _cross_signed(e[3], -e[2]), _cross_signed(e[4], -e[3]))
+end
+
+_has_consistent_orientation(jac) = all(>(0), jac) || all(<(0), jac)
+
+_valid_quad_jacobians(e::NTuple{4,SVector{2,T}}) where {T} =
+    _has_consistent_orientation(_corner_jacobians_2d(e))
+_valid_quad_jacobians(e) = true
+
 function element_quality_mean_ratio(::Block{2}, el)
     p1, p2, p3, p4 = el
     e = (p2-p1, p3-p2, p4-p3, p1-p4)
+    _valid_quad_jacobians(e) || return 0.0
 
     l2 = SVector(sum(abs2, e[1]), sum(abs2, e[2]), sum(abs2, e[3]), sum(abs2, e[4]))
     A  = SVector(_cross_mag(e[1], -e[4]), _cross_mag(e[2], -e[1]),
                  _cross_mag(e[3], -e[2]), _cross_mag(e[4], -e[3]))
+    any(iszero, A) && return 0.0
                  
     Q  = SVector((l2[1]+l2[3]), (l2[2]+l2[4]),
                  (l2[3]+l2[1]), (l2[4]+l2[2])) ./ (2 .* A)
 
-    return 4 / sum(Q)
+    denom = sum(Q)
+    return isfinite(denom) && denom > 0 ? 4 / denom : 0.0
 end
 
 function element_quality_condition_number(::Block{2}, el)
     p1, p2, p3, p4 = el
     e = (p2-p1, p3-p2, p4-p3, p1-p4) 
+    _valid_quad_jacobians(e) || return 0.0
 
     l2   = SVector(sum(abs2, e[1]), sum(abs2, e[2]), sum(abs2, e[3]), sum(abs2, e[4]))
     sins = SVector(_cross_mag(e[1], -e[4]), _cross_mag(e[2], -e[1]),

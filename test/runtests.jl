@@ -71,6 +71,33 @@ end
     @test degree == [3, 2, 3, 2]
 end
 
+@testset "Quadrilateral Quality" begin
+    p_square = [(0.0, 0.0), (1.0, 0.0), (1.0, 1.0), (0.0, 1.0)]
+    @test only(element_qualities(DMesh(p_square, [(1, 2, 3, 4)]))) ≈ 1.0
+    @test only(element_qualities(DMesh(p_square, [(1, 4, 3, 2)]))) ≈ 1.0
+
+    p_concave = [(0.0, 0.0), (1.0, 0.0), (0.2, 0.2), (0.0, 1.0)]
+    p_bowtie  = [(0.0, 0.0), (1.0, 0.0), (0.0, 1.0), (1.0, 1.0)]
+    @test only(element_qualities(DMesh(p_concave, [(1, 2, 3, 4)]))) == 0.0
+    @test only(element_qualities(DMesh(p_bowtie, [(1, 2, 3, 4)]))) == 0.0
+end
+
+@testset "Hexahedron Quality" begin
+    p_cube = [(0.0, 0.0, 0.0), (1.0, 0.0, 0.0), (1.0, 1.0, 0.0), (0.0, 1.0, 0.0),
+              (0.0, 0.0, 1.0), (1.0, 0.0, 1.0), (1.0, 1.0, 1.0), (0.0, 1.0, 1.0)]
+    @test only(element_qualities(DMesh(p_cube, [(1, 2, 3, 4, 5, 6, 7, 8)]))) ≈ 1.0
+
+    p_box = [(0.0, 0.0, 0.0), (2.0, 0.0, 0.0), (2.0, 1.0, 0.0), (0.0, 1.0, 0.0),
+             (0.0, 0.0, 1.0), (2.0, 0.0, 1.0), (2.0, 1.0, 1.0), (0.0, 1.0, 1.0)]
+    @test only(element_qualities(DMesh(p_box, [(1, 2, 3, 4, 5, 6, 7, 8)]))) ≈ 3 * cbrt(4) / 6
+
+    p_collapsed = copy(p_cube)
+    p_collapsed[5] = p_collapsed[1]
+    @test only(element_qualities(DMesh(p_collapsed, [(1, 2, 3, 4, 5, 6, 7, 8)]))) == 0.0
+    @test only(element_qualities(DMesh(p_cube, [(2, 1, 3, 4, 5, 6, 7, 8)]))) == 0.0
+    @test only(element_qualities(DMesh(p_cube, [(1, 4, 3, 2, 5, 8, 7, 6)]))) == 0.0
+end
+
 @testset "Unit Circle Mesh" begin
     msh = distmesh2d(dcircle, huniform, 0.2, ((-1,-1), (1,1)))
     check_mesh(msh, np=88, nt=143)
