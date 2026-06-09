@@ -713,7 +713,7 @@ function quad_project_and_smooth!(qmsh::DMesh, dfcn, hfcn, pfix=Point2d[];
 )
     deltat = 0.2
     h0 = minimum(norm.(all_edges(qmsh)))
-    dptol = 1e-6 * h0
+    dptol = 1e-4 * h0
     deps = sqrt(eps()) * h0
 
     p = qmsh.p
@@ -729,7 +729,7 @@ function quad_project_and_smooth!(qmsh::DMesh, dfcn, hfcn, pfix=Point2d[];
     # Main loop
     for iter = 1:maxiter
         pold = copy(p)
-        for (bars,Fsc) in ((bars1,0.2), (bars2,0.2))
+        for (bars,Fsc) in ((bars1,0.8), (bars2,0.8))
             barvec = barvectors(p, bars)
             L = norm.(barvec)
             L0 = desiredlengths(p, bars, L, hfcn, Fsc)
